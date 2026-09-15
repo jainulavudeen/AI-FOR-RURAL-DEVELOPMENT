@@ -1,0 +1,25 @@
+{
+  "schemeId": "dwbdnc_seed",
+  "title": "Scheme for Economic Empowerment of DNTs (SEED) — Development and Welfare Board for De-notified, Nomadic and Semi-Nomadic Communities (DWBDNC)",
+  "sourceUrl": "https://dwbdnc.dosje.gov.in/public/images/SEED_scheme_guidlines.pdf",
+  "sourceDescription": "DWBDNC's own content page (dwbdnc.dosje.gov.in/content/seed-scheme) and its linked official SEED Scheme Guidelines PDF. The PDF's binary content could not be parsed to text by automated fetch during this ingestion; the income-ceiling and component figures below were corroborated via web search of secondary summaries of the same official guidelines. Re-verify against the guidelines PDF directly (e.g. with a PDF-text-extraction tool) before treating this as final.",
+  "vintageLabel": "SEED Scheme, launched 16 February 2022",
+  "sections": [
+    {
+      "section": "Who can apply",
+      "text": "Members of De-notified (DNT), Nomadic (NT), and Semi-Nomadic (SNT) communities. Beneficiaries under the scheme are identified by the State Government/UTs, which issue the necessary certificate for availing benefits."
+    },
+    {
+      "section": "Income ceiling",
+      "text": "For the free-coaching component, only students from DNT/NT/SNT communities with an annual family income of Rs. 8 lakh or less are eligible, provided they are not availing a similar benefit from another Central or State government scheme."
+    },
+    {
+      "section": "Livelihood component",
+      "text": "All DNT/NT/SNT persons staying in villages and rural areas in India are eligible for the SEED Livelihoods component, which supports income-generation at the community level."
+    },
+    {
+      "section": "Other components",
+      "text": "Besides free coaching for competitive examinations (Civil Services, SSC, NEET, IIT-JEE, banking exams) and the livelihood component, SEED also assists with health insurance coverage (linked to Pradhan Mantri Jan Arogya Yojana) and financial assistance for house construction."
+    }
+  ]
+}

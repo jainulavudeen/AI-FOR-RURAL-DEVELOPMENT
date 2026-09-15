@@ -1,0 +1,43 @@
+{
+  "name": "@setu/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "ingest:census": "tsx src/ingestion/census/run.ts",
+    "ingest:mission-antyodaya": "tsx src/ingestion/missionAntyodaya/run.ts",
+    "ingest:nrlm-shg": "tsx src/ingestion/nrlmShg/run.ts",
+    "ingest:scheme-documents": "tsx src/ingestion/schemeDocuments/run.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "@fastify/cors": "^11.3.0",
+    "@setu/core": "*",
+    "csv-parse": "^7.0.2",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "^5.2.0",
+    "fastify-plugin": "^5.0.1",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "postgres": "^3.4.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.2",
+    "drizzle-kit": "^0.31.10",
+    "ioredis-mock": "^8.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^5.0.0"
+  }
+}

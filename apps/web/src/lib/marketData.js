@@ -1,0 +1,132 @@
+// Plain, unauthenticated fetches — public informational data, not a
+// gated action (see CLAUDE.md: auth only gates saving, appealing,
+// notifications). Never blocks a report: every function here degrades to
+// a clearly-labelled fallback instead of throwing.
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
+
+// Same honest regional-estimate figure as the backend's seeded fallback
+// row (apps/api/src/db/seed.ts) — kept here too so the card still renders
+// if the API is unreachable, per CLAUDE.md rule 4.
+export const FALLBACK_INFORMAL_RATE = {
+  ratePercent: 36,
+  label: 'regional_estimate',
+  vintageLabel: 'Illustrative regional estimate',
+}
+
+// apps/web/src/data/locations.js's district ids ('madurai', 'kanpur', ...)
+// are client-side mock slugs, not the real Postgres district UUIDs the
+// backend's district-specific lookups expect. Resolved once per district
+// via GET /feasibility/district-id and cached in module scope — only the
+// seeded Madurai pilot district will ever resolve; everything else
+// legitimately returns null and callers fall through to their honest
+// fallback, not an error.
+const districtIdCache = new Map()
+
+async function resolveDistrictId(districtSlug) {
+  if (!districtSlug) return null
+  if (districtIdCache.has(districtSlug)) return districtIdCache.get(districtSlug)
+
+  const promise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/feasibility/district-id?name=${encodeURIComponent(districtSlug)}`)
+      if (!response.ok) return null
+      const data = await response.json()
+      return data.id ?? null
+    } catch {
+      return null
+    }
+  })()
+
+  districtIdCache.set(districtSlug, promise)
+  return promise
+}
+
+// Two-tier lookup: pass the resolved real district UUID when we have one
+// (today, only Madurai), otherwise every other district correctly falls
+// through to the single honestly-labelled regional estimate row.
+export async function getInformalLendingRate(districtSlug) {
+  try {
+    const districtId = await resolveDistrictId(districtSlug)
+    const query = districtId ? `?districtId=${encodeURIComponent(districtId)}` : ''
+    const response = await fetch(`${API_BASE}/feasibility/informal-lending-rate${query}`)
+    if (!response.ok) return FALLBACK_INFORMAL_RATE
+    return await response.json()
+  } catch {
+    return FALLBACK_INFORMAL_RATE
+  }
+}
+
+// Same fetch-with-fallback shape as getInformalLendingRate — see
+// apps/api/src/modules/feasibility/service.ts's getLocalDemandSignal,
+// which already never throws server-side; this is a second, independent
+// degrade layer for when the API itself is unreachable from the client
+// (offline, DNS failure). 'district' is a plain name string (the mock
+// slug capitalized), not a UUID — the backend's Agmarknet lookup matches
+// on name, unlike the informal-lending-rate endpoint.
+export const FALLBACK_DEMAND_SIGNAL = { value: 0, label: 'neutral', asOf: null, commoditiesReported: 0 }
+
+export async function getLocalDemandSignal(districtSlug) {
+  if (!districtSlug) return FALLBACK_DEMAND_SIGNAL
+  const districtName = districtSlug.charAt(0).toUpperCase() + districtSlug.slice(1)
+  try {
+    const response = await fetch(`${API_BASE}/feasibility/local-demand?district=${encodeURIComponent(districtName)}`)
+    if (!response.ok) return FALLBACK_DEMAND_SIGNAL
+    return await response.json()
+  } catch {
+    return FALLBACK_DEMAND_SIGNAL
+  }
+}
+
+// Real, data-backed factor assembly (Census infra + NRLM SHG density,
+// narrated via the grounding service) — see apps/api's
+// feasibility/service.ts assembleFeasibilityScore. Degrades to `null` on
+// any failure, same as every other function here: lib/feasibility.js's
+// applyRealFactors treats `null` as "nothing to overlay", leaving the
+// seeded baseline standing (CLAUDE.md rule 4 — offline-first, never a
+// blocking or erroring second pass).
+// A POST body isn't a cache-key-safe GET, so this can't sit in the
+// service worker's Workbox runtimeCaching (see vite.config.js) the way the
+// three GET signals above do. Instead, the last successful response for a
+// given (business, district, block, language) is kept in localStorage and
+// read back on failure — the same "degrade, don't error" shape as every
+// other function here, just persisted across reloads so a report already
+// viewed once stays available offline, per CLAUDE.md rule 4.
+const scoreStorageKey = (businessId, districtSlug, blockId, locale) =>
+  `setu:feasibility-score:${businessId}|${districtSlug}|${blockId}|${locale}`
+
+function readCachedScore(key) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedScore(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage full/unavailable (private browsing, quota) — the live value
+    // still renders this session, it just won't survive a reload offline.
+  }
+}
+
+export async function getFeasibilityScore(businessId, districtSlug, blockId, locale) {
+  if (!businessId || !districtSlug || !blockId) return null
+  const key = scoreStorageKey(businessId, districtSlug, blockId, locale)
+  try {
+    const response = await fetch(`${API_BASE}/feasibility/score`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessId, districtId: districtSlug, blockId, locale }),
+    })
+    if (!response.ok) return readCachedScore(key)
+    const data = await response.json()
+    writeCachedScore(key, data)
+    return data
+  } catch {
+    return readCachedScore(key)
+  }
+}

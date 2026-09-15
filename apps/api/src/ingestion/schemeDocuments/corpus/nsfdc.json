@@ -1,0 +1,21 @@
+{
+  "schemeId": "nsfdc",
+  "title": "National Scheduled Castes Finance and Development Corporation (NSFDC)",
+  "sourceUrl": "https://nsfdc.nic.in/eligibility-requirements",
+  "sourceDescription": "NSFDC official website, 'Eligibility Requirements' page. Fetched live and transcribed for this corpus.",
+  "vintageLabel": "as of 7 January 2026",
+  "sections": [
+    {
+      "section": "Who can apply",
+      "text": "The beneficiary(ies) must belong to the Scheduled Caste (SC) community. Individuals, Partnership Firms, and Co-operative Societies are eligible to undertake income-generating activities. For Partnership Firms and Co-operative Societies, all members must belong to the SC community."
+    },
+    {
+      "section": "Income ceiling",
+      "text": "The annual family income of applicants must not exceed Rs. 5.00 lakh for credit/loan-based schemes, applicable to both rural and urban areas. For Partnership Firms and Co-operative Societies, the annual family income of each individual member/applicant must not exceed Rs. 5.00 lakh. There is no income criterion for participation in Skill Development Training Programmes."
+    },
+    {
+      "section": "How to apply",
+      "text": "Applicants are required to apply for financial assistance from NSFDC through the concerned State Channelizing Agencies (SCAs) or Channelizing Agencies (CAs) — NSFDC does not lend directly to individuals."
+    }
+  ]
+}

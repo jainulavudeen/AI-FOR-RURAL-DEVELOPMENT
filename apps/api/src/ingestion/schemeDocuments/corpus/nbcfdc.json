@@ -1,0 +1,25 @@
+{
+  "schemeId": "nbcfdc",
+  "title": "National Backward Classes Finance and Development Corporation (NBCFDC) — Individual Loan Scheme",
+  "sourceUrl": "https://www.nbcfdc.gov.in/nbcfdc/web/en/individual-loan-scheme",
+  "sourceDescription": "NBCFDC official website, 'Individual Loan Scheme' page. Fetched live and transcribed for this corpus.",
+  "vintageLabel": "as of 2026",
+  "sections": [
+    {
+      "section": "Who can apply",
+      "text": "Applicants must be members of Backward Classes, as notified by the Central Government or State Governments from time to time."
+    },
+    {
+      "section": "Income ceiling",
+      "text": "The applicant's annual family income should be up to Rs. 5.00 lakh."
+    },
+    {
+      "section": "Loan amount and financing pattern",
+      "text": "The maximum loan limit is Rs. 25.00 lakh per beneficiary. NBCFDC provides 85% of the funds through the Channel Partner; the beneficiary (with the Channel Partner) contributes the remaining 15%."
+    },
+    {
+      "section": "Interest rate and repayment tenure",
+      "text": "For income-generating activities up to Rs. 1.25 lakh: NBCFDC lends to the Channel Partner at 4% p.a., the Channel Partner lends to the beneficiary at 7% p.a., with a 4-year repayment period. For income-generating activities between Rs. 1.25 lakh and Rs. 25 lakh: NBCFDC lends at 5% p.a., the beneficiary rate is 8% p.a., with a 7-year repayment period. For education loans up to Rs. 25 lakh: NBCFDC lends at 5% p.a., the beneficiary rate is 8% p.a., with a maximum 10-year term inclusive of a 5-year moratorium period."
+    }
+  ]
+}

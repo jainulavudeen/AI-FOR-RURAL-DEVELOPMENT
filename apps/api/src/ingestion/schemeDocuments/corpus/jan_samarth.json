@@ -1,0 +1,21 @@
+{
+  "schemeId": "jan_samarth",
+  "title": "Jan Samarth Portal — Pradhan Mantri Mudra Yojana (PMMY) business loans",
+  "sourceUrl": "https://www.jansamarth.in/business-loan-pradhan-mantri-mudra-yojana-scheme",
+  "sourceDescription": "The Jan Samarth portal is a client-rendered single-page application; automated fetch retrieved only the page shell, not scheme content, across repeated attempts. The eligibility and loan-tier figures below are the well-established, cross-corroborated public terms of the Pradhan Mantri Mudra Yojana (PMMY) — the flagship micro-enterprise scheme Jan Samarth surfaces for business loans — sourced from multiple independent public summaries rather than one directly-fetched primary page. Re-verify against jansamarth.in or mudra.org.in directly (both blocked automated fetch this session — a client-rendered portal and a certificate error, respectively) before treating this as final.",
+  "vintageLabel": "as of 2026 (Tarun Plus tier reflects the 2023 Union Budget expansion)",
+  "sections": [
+    {
+      "section": "Who can apply",
+      "text": "Non-corporate, non-farm small and micro enterprises — including small traders, street vendors, artisans, and registered MSME owners — seeking to start or expand an income-generating business. Applicants must be Indian citizens with a viable business plan or an existing small business."
+    },
+    {
+      "section": "Loan categories",
+      "text": "PMMY offers four loan tiers by project cost: Shishu, covering loans up to Rs. 50,000; Kishor, covering loans above Rs. 50,000 and up to Rs. 5 lakh; Tarun, covering loans above Rs. 5 lakh and up to Rs. 10 lakh; and Tarun Plus, covering loans above Rs. 10 lakh and up to Rs. 20 lakh."
+    },
+    {
+      "section": "Collateral and lending institutions",
+      "text": "PMMY loans are collateral-free up to Rs. 20 lakh, extended by Member Lending Institutions including Scheduled Commercial Banks, Regional Rural Banks (RRBs), Small Finance Banks (SFBs), Non-Banking Financial Companies (NBFCs), and Micro Finance Institutions (MFIs)."
+    }
+  ]
+}

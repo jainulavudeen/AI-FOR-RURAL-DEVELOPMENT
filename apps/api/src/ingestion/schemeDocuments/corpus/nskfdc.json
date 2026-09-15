@@ -1,0 +1,21 @@
+{
+  "schemeId": "nskfdc",
+  "title": "National Safai Karamcharis Finance and Development Corporation (NSKFDC)",
+  "sourceUrl": "https://himachalservices.nic.in/hpscstdc/Sch-NSKFDCEng.htm",
+  "sourceDescription": "NSKFDC's own site (nskfdc.nic.in) could not be retrieved by automated fetch during this ingestion (transient failure, no successful response across repeated attempts). This document instead transcribes the Himachal Pradesh SC/ST Development Corporation's published republication of NSKFDC's national loan scheme terms — a State Channelizing Agency mirror of the same national scheme, not an independent state scheme. Flagged honestly rather than left unsourced; re-verify against nskfdc.nic.in directly when it becomes reachable.",
+  "vintageLabel": "as retrieved via HPSCSTDC mirror, 2026",
+  "sections": [
+    {
+      "section": "Who can apply",
+      "text": "An unemployed member of a Safai Karamcharis family, aged 18 to 55 years (20 to 53 years for vehicle loans). The applicant must not be a defaulter of any institution or bank, and must have the aptitude or required license for the concerned activity."
+    },
+    {
+      "section": "Self-Employment / Income-Generating Scheme",
+      "text": "Maximum loan amount: Rs. 5.00 lakh, for a project cost above Rs. 50,000. Interest rate: 6% per annum. Maximum tenure: 5 years. Financing structure: promoter contributes up to 5% of the total project cost, a state-level margin money loan covers 10% of the project cost, and the NSKFDC term loan covers 85% of the total project cost."
+    },
+    {
+      "section": "Micro Credit Finance Scheme (MCF/MSY)",
+      "text": "Loan amount: up to Rs. 50,000. Interest rate: 4% per annum. Maximum tenure: 3 years. No promoter contribution required — the NSKFDC loan portion is Rs. 40,000 with a capital subsidy of Rs. 10,000. Targeted at Safai Karamcharis and Scavengers' families identified under the National Scheme for Liberation and Rehabilitation of Scavengers."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schemeId": "nhfdc",
+  "title": "National Handicapped Finance and Development Corporation (NHFDC) — now National Divyangjan Finance and Development Corporation (NDFDC)",
+  "sourceUrl": "https://ndfdc.nic.in/how-to-obtain-loan",
+  "sourceDescription": "NHFDC has been renamed the National Divyangjan Finance and Development Corporation (NDFDC), now hosted at ndfdc.nic.in — the old nhfdc.nic.in domain no longer resolves. This document is transcribed from NDFDC's own 'How to Obtain Loan' page, fetched live for this corpus.",
+  "vintageLabel": "as of 2026",
+  "sections": [
+    {
+      "section": "Who can apply",
+      "text": "The applicant must be a person with disability (Divyangjan). Loans are channelised through State Channelising Agencies (SCAs) nominated by state governments, and through partner banks (including Punjab National Bank, Bank of Baroda, IDBI, Union Bank, and J&K Bank)."
+    },
+    {
+      "section": "Project cost and sanctioning",
+      "text": "Projects up to Rs. 50 lakh are sanctioned by the State Channelising Agencies."
+    },
+    {
+      "section": "Interest rate concessions",
+      "text": "Education loans are available at a concessional rate of 4% per annum. Women with disabilities receive a special 1% rebate on interest for self-employment loans up to Rs. 50,000."
+    }
+  ]
+}

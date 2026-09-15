@@ -1,0 +1,21 @@
+import { sql } from 'drizzle-orm'
+import { index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { geometry } from './customTypes'
+
+export const districts = pgTable(
+  'districts',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    stateCode: text('state_code').notNull(),
+    stateName: text('state_name').notNull(),
+    name: text('name').notNull(),
+    digipin: text('digipin'),
+    geom: geometry('geom', { type: 'MultiPolygon', srid: 4326 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('districts_state_name_unique').on(table.stateCode, table.name),
+    index('districts_geom_gist_idx').using('gist', table.geom),
+  ]
+)
