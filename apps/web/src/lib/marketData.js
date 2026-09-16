@@ -130,3 +130,22 @@ export async function getFeasibilityScore(businessId, districtSlug, blockId, loc
     return readCachedScore(key)
   }
 }
+
+// Anonymised peer-benchmark aggregate — see apps/api's peerBenchmark.ts for
+// the k-anonymity gate. `available: false` (never an error, never a partial
+// count below the threshold) is the correct and expected response for most
+// (business, district, verdict) combinations in this small pilot dataset —
+// the UI treats it as "nothing to show yet," not a failure.
+export const FALLBACK_PEER_BENCHMARK = { available: false }
+
+export async function getPeerBenchmark(businessId, districtSlug, verdictKey) {
+  if (!businessId || !districtSlug || !verdictKey) return FALLBACK_PEER_BENCHMARK
+  try {
+    const params = new URLSearchParams({ businessId, districtId: districtSlug, verdictKey })
+    const response = await fetch(`${API_BASE}/feasibility/peer-benchmark?${params}`)
+    if (!response.ok) return FALLBACK_PEER_BENCHMARK
+    return await response.json()
+  } catch {
+    return FALLBACK_PEER_BENCHMARK
+  }
+}

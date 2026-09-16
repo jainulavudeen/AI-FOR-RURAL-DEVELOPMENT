@@ -31,6 +31,28 @@ export async function requestReview({ inputs, score, verdictKey, matchedSchemeId
   return postQueueable('/feedback/appeal', { inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource })
 }
 
+// Best-effort persistence of every completed report (not just appealed
+// ones) — feeds the peer-benchmark cohort (see lib/marketData.js's
+// getPeerBenchmark). Deliberately NOT queued for background sync like
+// flagInsight/requestReview above: this is a silent side-effect of viewing
+// a report, not a user-initiated action the user is waiting to see
+// confirmed, so a dropped call while offline is fine to just drop — no
+// "queued" state to show, and per CLAUDE.md rule 4, never blocks or errors
+// visibly either way. Only ever called when the applicant is authenticated
+// (see Results.jsx) — the same auth boundary as every other "saving" call.
+export async function saveReport({ inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource }) {
+  try {
+    const response = await authorizedFetch('/feedback/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource }),
+    })
+    return { ok: response.ok }
+  } catch {
+    return { ok: false }
+  }
+}
+
 // Officer actions are NOT background-synced (officers are assumed to have
 // more reliable connectivity) — a network failure here is a real,
 // retryable error, not a queued success.

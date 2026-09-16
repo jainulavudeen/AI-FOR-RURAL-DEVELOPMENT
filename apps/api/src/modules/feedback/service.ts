@@ -84,18 +84,20 @@ export async function createFlag(deps: FeedbackDeps, applicantId: string, body: 
   return deps.insertFeedbackFlag({ applicantId, ...body })
 }
 
+function buildDataVintage(body: AppealRequestBody, schemeVersion: number) {
+  return {
+    feasibility: 'mock-seeded-random',
+    calculator: '@setu/core',
+    schemeRules: `${body.matchedSchemeId}@v${schemeVersion}`,
+    marginCapitalSource: body.marginCapitalSource ?? 'self_reported',
+    generatedAt: new Date().toISOString(),
+  }
+}
+
 export async function createAppeal(deps: FeedbackDeps, applicantId: string, body: AppealRequestBody): Promise<Appeal> {
   const rule = await deps.getCurrentSchemeRuleVersion(body.matchedSchemeId)
   if (!rule) {
     throw new NotFoundError(`No active scheme_rules row for scheme "${body.matchedSchemeId}"`)
-  }
-
-  const dataVintage = {
-    feasibility: 'mock-seeded-random',
-    calculator: '@setu/core',
-    schemeRules: `${body.matchedSchemeId}@v${rule.version}`,
-    marginCapitalSource: body.marginCapitalSource ?? 'self_reported',
-    generatedAt: new Date().toISOString(),
   }
 
   const report = await deps.insertReport({
@@ -106,13 +108,40 @@ export async function createAppeal(deps: FeedbackDeps, applicantId: string, body
     matchedSchemeId: body.matchedSchemeId,
     schemeRulesVersionId: rule.id,
     emiSchedule: body.emiSchedule,
-    dataVintage,
+    dataVintage: buildDataVintage(body, rule.version),
   })
 
   const loads = await deps.getOfficerLoads()
   const assignedOfficerId = pickOfficerByLoad(loads)
 
   return deps.insertAppeal({ applicantId, reportId: report.id, assignedOfficerId })
+}
+
+// Persists a report WITHOUT filing an appeal or touching officer assignment
+// — every completed report an authenticated applicant views, not just the
+// marginal/low-score ones that get appealed. Added for the peer-benchmark
+// feature (peerBenchmark.ts): without this, `reports` only ever contained
+// appealed (mostly low-scoring) reports, which would make "entrepreneurs
+// like you" a systematically biased sample rather than a real cross-section.
+// Best-effort from the client (see apps/web/src/lib/marketData.js) — never
+// blocks rendering, and only ever happens for logged-in applicants, same
+// auth boundary as every other "saving" action.
+export async function saveReport(deps: FeedbackDeps, applicantId: string, body: AppealRequestBody): Promise<{ id: string }> {
+  const rule = await deps.getCurrentSchemeRuleVersion(body.matchedSchemeId)
+  if (!rule) {
+    throw new NotFoundError(`No active scheme_rules row for scheme "${body.matchedSchemeId}"`)
+  }
+
+  return deps.insertReport({
+    applicantId,
+    inputs: body.inputs,
+    score: body.score,
+    verdictKey: body.verdictKey,
+    matchedSchemeId: body.matchedSchemeId,
+    schemeRulesVersionId: rule.id,
+    emiSchedule: body.emiSchedule,
+    dataVintage: buildDataVintage(body, rule.version),
+  })
 }
 
 export async function getOfficerQueue(deps: FeedbackDeps, officerRole: string, officerId: string): Promise<QueueItem[]> {

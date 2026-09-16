@@ -6,6 +6,7 @@ import {
   createAppeal,
   createFlag,
   getOfficerQueue as getOfficerQueueService,
+  saveReport,
   updateAppealStatus,
   type Appeal,
   type FeedbackDeps,
@@ -139,6 +140,17 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const appeal = await createAppeal(deps, request.user.sub, { inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource })
     return reply.status(201).send(appeal)
+  })
+
+  // Best-effort report persistence for the peer-benchmark feature — see
+  // service.ts's saveReport. Same body shape as /appeal, no appeal created.
+  fastify.post<{ Body: AppealRequestBody }>('/report', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const { inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource } = request.body ?? {}
+    if (!inputs || typeof score !== 'number' || !verdictKey || !matchedSchemeId) {
+      return reply.status(400).send({ error: { message: 'inputs, score, verdictKey and matchedSchemeId are required', code: 'BAD_REQUEST' } })
+    }
+    const report = await saveReport(deps, request.user.sub, { inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource })
+    return reply.status(201).send(report)
   })
 
   fastify.get('/queue', { preHandler: [fastify.authenticate] }, async (request, reply) => {

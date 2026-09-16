@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { narrateReport } from '../grounding/service'
 import { createAgmarknetProvider } from './agmarknetProvider'
 import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache'
+import { getPeerBenchmark } from './peerBenchmark'
 import { assembleFeasibilityScore, getInformalLendingRate, getLocalDemandSignal } from './service'
 import type { ScoreRequestBody } from './types'
 
@@ -11,6 +12,7 @@ import type { ScoreRequestBody } from './types'
 const DISTRICT_REFERENCE_MAX_AGE = 24 * 60 * 60 // 24h — district/block names are static reference data
 const LOCAL_DEMAND_MAX_AGE = 6 * 60 * 60 // 6h — matches agmarknetCache.ts's FRESH_SECONDS
 const INFORMAL_RATE_MAX_AGE = 24 * 60 * 60 // 24h — a seeded regional estimate, rarely updated
+const PEER_BENCHMARK_MAX_AGE = 60 * 60 // 1h — aggregate stat that shifts as more reports accrue
 
 const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
   const agmarknetProvider = createAgmarknetProvider()
@@ -70,6 +72,24 @@ const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
     const id = await getCachedDistrictId(fastify.redis, fastify.db, name)
     return reply.header('Cache-Control', `public, max-age=${DISTRICT_REFERENCE_MAX_AGE}`).status(200).send({ id })
   })
+
+  // Anonymized aggregate only — see peerBenchmark.ts's K_ANONYMITY_THRESHOLD
+  // comment for why 5. Public/unauthenticated: the response never carries
+  // anything identifying, by construction (it's a cohort-level aggregate or
+  // nothing at all).
+  fastify.get<{ Querystring: { businessId?: string; districtId?: string; verdictKey?: string } }>(
+    '/peer-benchmark',
+    async (request, reply) => {
+      const { businessId, districtId, verdictKey } = request.query
+      if (!businessId || !districtId || !verdictKey) {
+        return reply
+          .status(400)
+          .send({ error: { message: 'businessId, districtId, and verdictKey are required', code: 'BAD_REQUEST' } })
+      }
+      const result = await getPeerBenchmark(fastify.db, { businessId, districtId, verdictKey })
+      return reply.header('Cache-Control', `public, max-age=${PEER_BENCHMARK_MAX_AGE}`).status(200).send(result)
+    }
+  )
 }
 
 export default feasibilityRoutes

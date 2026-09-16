@@ -19,6 +19,7 @@ import RouteSkeleton from './components/RouteSkeleton'
 const Landing = lazy(() => import('./pages/Landing'))
 const Wizard = lazy(() => import('./pages/Wizard'))
 const Results = lazy(() => import('./pages/Results'))
+const Compare = lazy(() => import('./pages/Compare'))
 const SchemeComparison = lazy(() => import('./pages/SchemeComparison'))
 const Architecture = lazy(() => import('./pages/Architecture'))
 const OfficerDashboard = lazy(() => import('./pages/OfficerDashboard'))
@@ -31,6 +32,7 @@ function AnimatedRoutes() {
         <Route path="/" element={<PageTransition><Landing /></PageTransition>} />
         <Route path="/eligibility" element={<PageTransition><Wizard /></PageTransition>} />
         <Route path="/results" element={<PageTransition><Results /></PageTransition>} />
+        <Route path="/compare" element={<PageTransition><Compare /></PageTransition>} />
         <Route path="/schemes" element={<PageTransition><SchemeComparison /></PageTransition>} />
         <Route path="/architecture" element={<PageTransition><Architecture /></PageTransition>} />
         <Route path="/partners" element={<PageTransition><OfficerDashboard /></PageTransition>} />

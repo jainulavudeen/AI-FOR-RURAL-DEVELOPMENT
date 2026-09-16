@@ -213,7 +213,7 @@ export default function RouteSkeleton() {
   if (pathname === '/') return <LandingSkeleton />
   if (pathname === '/results') return <ResultsSkeleton />
   if (pathname === '/partners') return <TableSkeleton />
-  if (pathname === '/schemes') return <SchemeCompareSkeleton />
+  if (pathname === '/schemes' || pathname === '/compare') return <SchemeCompareSkeleton />
   if (pathname === '/eligibility') return <FormSkeleton />
   if (pathname === '/architecture') return <ArchitectureSkeleton />
   return <FormSkeleton />

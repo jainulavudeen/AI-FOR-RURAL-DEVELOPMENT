@@ -24,11 +24,13 @@ const variants = {
 
 export default function Wizard() {
   const { t } = useI18n()
-  const { selection, updateSelection, setHasReport } = useAppData()
+  const { selection, updateSelection, setHasReport, compareBusinessIds, toggleCompareBusinessId, setHasComparison } =
+    useAppData()
   const navigate = useNavigate()
 
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState(1)
+  const [compareMode, setCompareMode] = useState(false)
 
   const districts = useMemo(
     () => (selection.stateId ? LOCATIONS[selection.stateId]?.districts ?? [] : []),
@@ -44,15 +46,20 @@ export default function Wizard() {
 
   const canContinue = () => {
     if (step === 0) return Boolean(selection.stateId && selection.districtId && selection.blockId)
-    if (step === 1) return Boolean(selection.businessId)
+    if (step === 1) return compareMode ? compareBusinessIds.length >= 2 : Boolean(selection.businessId)
     return selection.margin >= MIN_MARGIN
   }
 
   const goNext = () => {
     if (!canContinue()) return
     if (step === 2) {
-      setHasReport(true)
-      navigate('/results')
+      if (compareMode) {
+        setHasComparison(true)
+        navigate('/compare')
+      } else {
+        setHasReport(true)
+        navigate('/results')
+      }
       return
     }
     setDirection(1)
@@ -167,15 +174,32 @@ export default function Wizard() {
                 <h2 className="text-2xl font-bold text-primary-900">{t('wizard.step2Title')}</h2>
                 <p className="mt-2 text-sm text-ink-900/60">{t('wizard.step2Subtitle')}</p>
 
-                <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <label className="mt-4 flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={compareMode}
+                    onChange={(e) => setCompareMode(e.target.checked)}
+                    className="h-4 w-4 rounded accent-primary-700"
+                  />
+                  <span className="text-sm text-ink-900/70">{t('compare.toggleLabel')}</span>
+                </label>
+                {compareMode && (
+                  <p className="mt-1 text-xs text-ink-900/50">
+                    {t('compare.toggleHint')} · {t('compare.selectedCount', { count: compareBusinessIds.length })}
+                  </p>
+                )}
+
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {BUSINESS_TYPES.map((b) => {
-                    const selected = selection.businessId === b.id
+                    const selected = compareMode ? compareBusinessIds.includes(b.id) : selection.businessId === b.id
                     return (
                       <motion.button
                         key={b.id}
                         type="button"
                         whileTap={{ scale: 0.96 }}
-                        onClick={() => updateSelection({ businessId: b.id })}
+                        onClick={() =>
+                          compareMode ? toggleCompareBusinessId(b.id) : updateSelection({ businessId: b.id })
+                        }
                         className={`flex flex-col items-center gap-3 rounded-2xl border-2 px-4 py-6 text-center transition-colors duration-200 ${
                           selected
                             ? 'border-primary-700 bg-primary-50'
@@ -291,7 +315,7 @@ export default function Wizard() {
             disabled={!canContinue()}
             className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-7 py-3 text-sm font-semibold text-white shadow-md shadow-amber-900/20 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-400 transition-colors"
           >
-            {step === 2 ? t('wizard.generateReport') : t('common.continue')}
+            {step === 2 ? (compareMode ? t('compare.generateCta') : t('wizard.generateReport')) : t('common.continue')}
             <ArrowRight size={16} />
           </button>
         </div>

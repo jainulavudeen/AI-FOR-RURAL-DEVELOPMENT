@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { AlertTriangle, Download, RefreshCcw, Pencil, BadgeCheck, SlidersHorizontal } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
+import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { LOCATIONS } from '../data/locations'
 import { BUSINESS_TYPES } from '../data/businesses'
@@ -15,6 +16,7 @@ import {
   getLocalDemandSignal,
   getFeasibilityScore,
 } from '../lib/marketData'
+import { saveReport } from '../lib/feedback'
 import { formatINR, formatIndianNumber, formatPercent } from '../lib/format'
 import RadialGauge from '../components/RadialGauge'
 import InsightCard from '../components/InsightCard'
@@ -27,6 +29,8 @@ import SocialSchemesPanel from '../components/SocialSchemesPanel'
 import AppealPanel from '../components/AppealPanel'
 import CostOfInactionCard from '../components/CostOfInactionCard'
 import AccountAggregatorOptIn from '../components/AccountAggregatorOptIn'
+import MicroLesson from '../components/MicroLesson'
+import PeerBenchmarkCard from '../components/PeerBenchmarkCard'
 import Icon from '../components/Icon'
 
 const SIM_MIN_MARGIN = 5000
@@ -35,6 +39,7 @@ const SIM_STEP_MARGIN = 1000
 
 export default function Results() {
   const { t, language } = useI18n()
+  const { isAuthenticated } = useAuth()
   const { selection, hasReport, resetSelection, updateSelection } = useAppData()
   const navigate = useNavigate()
 
@@ -120,6 +125,25 @@ export default function Results() {
     () => applyRealFactors(applyDemandSignal(baseFeasibility, demandSignal), realFactors),
     [baseFeasibility, demandSignal, realFactors]
   )
+
+  // Best-effort, silent persistence of every completed report a logged-in
+  // applicant views — not just the ones they appeal. Feeds the peer
+  // benchmark's cohort (PeerBenchmarkCard below); see lib/feedback.js's
+  // saveReport for why this is never queued/retried like the appeal flow.
+  // Fires once per distinct report (business/district/block/margin/score
+  // combination), not on every render.
+  useEffect(() => {
+    if (!isAuthenticated || !selection.businessId || !selection.districtId || !selection.blockId) return
+    saveReport({
+      inputs: selection,
+      score: feasibility.score,
+      verdictKey: feasibility.verdictKey,
+      matchedSchemeId: finance.scheme.id,
+      emiSchedule: schedule.rows,
+      marginCapitalSource: selection.marginSource,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, selection.businessId, selection.districtId, selection.blockId, selection.margin, feasibility.score])
 
   if (!business || !selection.stateId || !selection.districtId || !selection.blockId) return null
 
@@ -216,6 +240,12 @@ export default function Results() {
           <h3 className="mt-8 mb-3 text-sm font-bold text-primary-900">{t('results.swotTitle')}</h3>
           <SwotGrid businessId={business.id} />
 
+          <PeerBenchmarkCard
+            businessId={selection.businessId}
+            districtId={selection.districtId}
+            verdictKey={feasibility.verdictKey}
+          />
+
           {needsReview && (
             <AppealPanel
               inputs={selection}
@@ -266,6 +296,7 @@ export default function Results() {
                 updateSelection({ margin: estimatedMarginCapital, marginSource: 'aa' })
               }
             />
+            <MicroLesson topic="margin" highlight={needsReview} />
           </div>
 
           <h3 className="mb-3 text-sm font-bold text-primary-900 text-center">{t('results.splitTitle')}</h3>
@@ -303,6 +334,8 @@ export default function Results() {
             />
           </div>
 
+          {finance.scheme.moratoriumMonths > 0 && <MicroLesson topic="moratorium" highlight={needsReview} />}
+
           {finance.capped && (
             <div className="mt-6 rounded-2xl border-2 border-amber-500/40 bg-amber-50 p-5">
               <div className="flex items-center gap-2 mb-2">
@@ -324,6 +357,8 @@ export default function Results() {
           )}
 
           <CostOfInactionCard informalRate={informalRate.ratePercent} isEstimate={informalRate.label === 'regional_estimate'} schemeRate={finance.scheme.interestRate} />
+
+          <MicroLesson topic="emi" highlight={needsReview} />
 
           <EmiScheduleTable rows={schedule.rows} />
 
