@@ -13,13 +13,14 @@ import groundingModule from './modules/grounding'
 import notificationModule from './modules/notification'
 import schemeRouterModule from './modules/schemeRouter'
 import siteCaptureModule from './modules/siteCapture'
+import ussdModule from './modules/ussd'
 
-// One deployable unit — six original modules plus accountAggregator and
-// siteCapture, deliberate exceptions (see CLAUDE.md: consented external
-// data acquisition, and now geotagged evidence capture, don't semantically
-// belong inside any of the original six). Still a modular monolith, not
-// microservices — inter-module calls are plain function calls with no
-// network hop.
+// One deployable unit — six original modules plus accountAggregator,
+// siteCapture and ussd, deliberate exceptions (see CLAUDE.md: consented
+// external data acquisition, geotagged evidence capture, and now a
+// non-smartphone access rail, don't semantically belong inside any of the
+// original six). Still a modular monolith, not microservices —
+// inter-module calls are plain function calls with no network hop.
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: true, trustProxy: true })
 
@@ -40,6 +41,7 @@ export function buildApp(): FastifyInstance {
   app.register(feedbackModule, { prefix: '/feedback' })
   app.register(accountAggregatorModule, { prefix: '/account-aggregator' })
   app.register(siteCaptureModule, { prefix: '/site-capture' })
+  app.register(ussdModule, { prefix: '/ussd' })
 
   return app
 }

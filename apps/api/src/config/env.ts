@@ -10,6 +10,11 @@ const envSchema = z.object({
   SMS_PROVIDER: z.enum(['console', 'msg91']).default('console'),
   MSG91_API_KEY: z.string().optional(),
   MSG91_SENDER_ID: z.string().optional(),
+  // WhatsApp Business API needs a Meta Business/BSP partnership and
+  // template pre-approval this environment doesn't have — mock only, same
+  // posture as ACCOUNT_AGGREGATOR_PROVIDER/CPGRAMS_PROVIDER (no 'real'
+  // option exists to accidentally select). See modules/notification/whatsappAdapter.ts.
+  WHATSAPP_PROVIDER: z.enum(['console']).default('console'),
   AGMARKNET_PROVIDER: z.enum(['mock', 'real']).default('mock'),
   AGMARKNET_API_KEY: z.string().optional(),
   // Only a mock exists — no real AA partner is integrated (see CLAUDE.md).

@@ -495,6 +495,15 @@ const en = {
     gemName: 'GeM — Government e-Marketplace',
     gemDesc: 'Sell directly to government departments and public sector buyers.',
   },
+  narration: {
+    intro: 'Report for a {{business}} business in {{block}}, {{district}}, {{state}}.',
+    score: 'Feasibility score {{score}} out of 100, rated {{verdict}}.',
+    scheme: 'You are matched to the {{scheme}}, with a loan amount of Rupees {{loanAmount}} at {{rate}} percent interest.',
+    emi: 'Your estimated monthly payment is Rupees {{emi}}, over {{months}} months.',
+    moratorium: 'There is a repayment break of {{months}} months before payments begin.',
+    listenToReport: 'Listen to Full Report',
+    stop: 'Stop',
+  },
 }
 
 const hi = {
@@ -990,6 +999,15 @@ const hi = {
     gemName: 'जेम — सरकारी ई-मार्केटप्लेस',
     gemDesc: 'सरकारी विभागों और सार्वजनिक क्षेत्र के खरीदारों को सीधे बेचें।',
   },
+  narration: {
+    intro: '{{state}}, {{district}}, {{block}} में एक {{business}} व्यवसाय के लिए रिपोर्ट।',
+    score: 'व्यवहार्यता स्कोर 100 में से {{score}}, दर्जा {{verdict}}।',
+    scheme: 'आप {{scheme}} के लिए मिलान किए गए हैं, जिसमें {{rate}} प्रतिशत ब्याज पर {{loanAmount}} रुपये की ऋण राशि है।',
+    emi: 'आपकी अनुमानित मासिक भुगतान राशि {{months}} महीनों में {{emi}} रुपये है।',
+    moratorium: 'भुगतान शुरू होने से पहले {{months}} महीनों की स्थगन अवधि है।',
+    listenToReport: 'पूरी रिपोर्ट सुनें',
+    stop: 'रोकें',
+  },
 }
 
 const ta = {
@@ -1484,6 +1502,15 @@ const ta = {
     enamDesc: 'இந்தியா முழுவதும் வெளிப்படையான விலைகளில் வேளாண் உற்பத்திகளை நேரடியாக வாங்குபவர்களுக்கு விற்கவும்.',
     gemName: 'ஜெம் — அரசு இ-மார்க்கெட்பிளேஸ்',
     gemDesc: 'அரசு துறைகள் மற்றும் பொதுத்துறை வாங்குபவர்களுக்கு நேரடியாக விற்கவும்.',
+  },
+  narration: {
+    intro: '{{state}}, {{district}}, {{block}}ல் ஒரு {{business}} தொழிலுக்கான அறிக்கை.',
+    score: 'சாத்தியக்கூறு மதிப்பெண் 100க்கு {{score}}, தரம் {{verdict}}.',
+    scheme: 'நீங்கள் {{scheme}}உடன் பொருத்தப்பட்டுள்ளீர்கள், {{rate}} சதவீத வட்டியில் {{loanAmount}} ரூபாய் கடன் தொகையுடன்.',
+    emi: 'உங்கள் மதிப்பிடப்பட்ட மாதாந்திர தவணை {{months}} மாதங்களில் {{emi}} ரூபாய்.',
+    moratorium: 'கட்டணம் தொடங்குவதற்கு முன் {{months}} மாத தவணை தள்ளுபடி காலம் உள்ளது.',
+    listenToReport: 'முழு அறிக்கையைக் கேளுங்கள்',
+    stop: 'நிறுத்து',
   },
 }
 

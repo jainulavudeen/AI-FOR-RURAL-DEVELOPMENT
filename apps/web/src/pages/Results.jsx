@@ -33,6 +33,7 @@ import MicroLesson from '../components/MicroLesson'
 import PeerBenchmarkCard from '../components/PeerBenchmarkCard'
 import SiteCaptureCard from '../components/SiteCaptureCard'
 import MarketplaceNudge from '../components/MarketplaceNudge'
+import ReportNarration from '../components/ReportNarration'
 import Icon from '../components/Icon'
 
 const SIM_MIN_MARGIN = 5000
@@ -181,7 +182,16 @@ export default function Results() {
             })}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          <ReportNarration
+            business={business}
+            feasibility={feasibility}
+            finance={finance}
+            schedule={schedule}
+            stateLabelKey={stateLabelKey}
+            districtLabelKey={districtLabelKey}
+            blockLabelKey={blockLabelKey}
+          />
           <Link
             to="/eligibility"
             className="inline-flex items-center gap-1.5 rounded-full border border-primary-200 px-4 py-2 text-xs font-semibold text-primary-700 hover:bg-primary-50 transition-colors"

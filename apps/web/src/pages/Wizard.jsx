@@ -8,6 +8,7 @@ import { LOCATIONS, STATE_IDS } from '../data/locations'
 import { BUSINESS_TYPES } from '../data/businesses'
 import { SOCIAL_CATEGORIES } from '@setu/core'
 import { formatIndianNumber } from '../lib/format'
+import { matchSpokenOption } from '../lib/voiceMatch'
 import ProgressBar from '../components/ProgressBar'
 import Icon from '../components/Icon'
 import VoiceInputButton from '../components/VoiceInputButton'
@@ -84,6 +85,29 @@ export default function Wizard() {
     updateSelection({ margin: num, marginSource: 'self_reported' })
   }
 
+  // Extends voice input past the margin field: fuzzy-matches a spoken
+  // district name against every district across every state (block/village
+  // names in this app's mock data are generic placeholders shared
+  // identically across every district — see data/locations.js — so voice
+  // input targets the district, the finest layer voice can meaningfully
+  // disambiguate; block selection stays a tap, same as it already was).
+  // A miss (match === null) is silently ignored — the select dropdowns are
+  // always there as the fallback, per CLAUDE.md's feature-detect posture.
+  const handleLocationVoiceResult = (transcript) => {
+    const flatDistricts = STATE_IDS.flatMap((stateId) =>
+      LOCATIONS[stateId].districts.map((d) => ({ stateId, districtId: d.id, label: t(d.labelKey) }))
+    )
+    const match = matchSpokenOption(transcript, flatDistricts, (d) => d.label)
+    if (match) updateSelection({ stateId: match.stateId, districtId: match.districtId, blockId: '' })
+  }
+
+  const handleBusinessVoiceResult = (transcript) => {
+    const match = matchSpokenOption(transcript, BUSINESS_TYPES, (b) => t(b.labelKey))
+    if (!match) return
+    if (compareMode) toggleCompareBusinessId(match.id)
+    else updateSelection({ businessId: match.id })
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-5 sm:px-8 py-12 sm:py-16">
       <ProgressBar steps={stepLabels} current={step} />
@@ -107,7 +131,10 @@ export default function Wizard() {
                   <span className="text-xs font-semibold uppercase tracking-wide">{t('wizard.stepLabel', { current: 1, total: 3 })}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-primary-900">{t('wizard.step1Title')}</h2>
-                <p className="mt-2 text-sm text-ink-900/60">{t('wizard.step1Subtitle')}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <p className="text-sm text-ink-900/60">{t('wizard.step1Subtitle')}</p>
+                  <VoiceInputButton onResult={handleLocationVoiceResult} className="h-8 w-8" />
+                </div>
 
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-5">
                   <div>
@@ -172,7 +199,10 @@ export default function Wizard() {
                   <span className="text-xs font-semibold uppercase tracking-wide">{t('wizard.stepLabel', { current: 2, total: 3 })}</span>
                 </div>
                 <h2 className="text-2xl font-bold text-primary-900">{t('wizard.step2Title')}</h2>
-                <p className="mt-2 text-sm text-ink-900/60">{t('wizard.step2Subtitle')}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <p className="text-sm text-ink-900/60">{t('wizard.step2Subtitle')}</p>
+                  <VoiceInputButton onResult={handleBusinessVoiceResult} className="h-8 w-8" />
+                </div>
 
                 <label className="mt-4 flex items-center gap-2.5 cursor-pointer">
                   <input
