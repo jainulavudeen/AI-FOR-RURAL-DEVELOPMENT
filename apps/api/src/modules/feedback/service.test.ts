@@ -10,7 +10,9 @@ import {
   createAppeal,
   createFlag,
   getOfficerQueue,
+  getReportById,
   pickOfficerByLoad,
+  saveReport,
   sweepSlaBreaches,
   updateAppealStatus,
   type Appeal,
@@ -52,6 +54,7 @@ function makeDeps(overrides: Partial<FeedbackDeps> = {}): FeedbackDeps {
     updateAppealEscalation: async (id, input) => makeAppeal({ id, status: 'escalated', ...input }),
     getApplicantPhone: async () => '+919999900002',
     cpgrams: makeMockCpgrams(),
+    getReportById: async () => null,
     ...overrides,
   }
 }
@@ -260,5 +263,100 @@ describe('sweepSlaBreaches', () => {
   it('is officer-only', async () => {
     const deps = makeDeps()
     await expect(sweepSlaBreaches(deps, 'applicant')).rejects.toThrow(ForbiddenError)
+  })
+})
+
+// Unit 4 hardening item 3: "generate a report, bump a scheme_rules
+// version, regenerate the same report by id, assert the numbers are
+// unchanged." A real Postgres isn't spun up for this test file (see the
+// rest of this suite's convention), but the in-memory store below
+// faithfully reproduces the one property under test — insertReport writes
+// once, nothing ever UPDATEs those columns afterward, getReportById is a
+// plain read of that same row — which is exactly the mechanism that makes
+// reproducibility true against a real database too.
+describe('getReportById / reproducibility across a scheme_rules version bump', () => {
+  it('a report saved under rule v1 still reads back v1\'s numbers after "current" becomes v2', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const store = new Map<string, any>()
+    let currentVersion = { id: 'rule-v1', version: 1 }
+
+    const deps = makeDeps({
+      getCurrentSchemeRuleVersion: async () => currentVersion,
+      insertReport: async (input) => {
+        const id = 'report-1'
+        // Real adapters (routes.ts) map schemeRulesVersionId -> the
+        // schemeRulesVersion column — reproduced here so this mock's shape
+        // matches what getReportById actually reads back in production.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const row: any = { ...input, id, schemeRulesVersion: input.schemeRulesVersionId, createdAt: new Date() }
+        store.set(id, row)
+        return { id }
+      },
+      getReportById: async (id) => store.get(id) ?? null,
+    })
+
+    const saved = await saveReport(deps, 'applicant-1', {
+      inputs: { businessId: 'dairy', districtId: 'madurai' },
+      score: 68,
+      verdictKey: 'verdict.moderate',
+      matchedSchemeId: 'micro_finance',
+      emiSchedule: [{ month: 1, payment: 1234 }],
+    })
+
+    const beforeBump = await getReportById(deps, 'applicant-1', 'applicant', saved.id)
+    expect(beforeBump.schemeRulesVersion).toBe('rule-v1')
+    expect(beforeBump.score).toBe(68)
+
+    // Simulate a scheme_rules version bump — "current" now resolves to v2,
+    // exactly as it would after a real insert-new-version-close-old write.
+    currentVersion = { id: 'rule-v2', version: 2 }
+
+    const afterBump = await getReportById(deps, 'applicant-1', 'applicant', saved.id)
+    expect(afterBump).toEqual(beforeBump) // byte-for-byte identical, not just "close enough"
+    expect(afterBump.schemeRulesVersion).toBe('rule-v1') // still v1, never silently repointed to v2
+    expect(afterBump.score).toBe(68)
+    expect(afterBump.matchedSchemeId).toBe('micro_finance')
+    expect(afterBump.emiSchedule).toEqual([{ month: 1, payment: 1234 }])
+  })
+
+  it('404s on a report that does not exist', async () => {
+    const deps = makeDeps({ getReportById: async () => null })
+    await expect(getReportById(deps, 'applicant-1', 'applicant', 'missing')).rejects.toThrow(NotFoundError)
+  })
+
+  it('refuses to let one applicant read another applicant\'s report', async () => {
+    const deps = makeDeps({
+      getReportById: async () => ({
+        id: 'report-1',
+        applicantId: 'someone-else',
+        inputs: {},
+        score: 50,
+        verdictKey: 'verdict.marginal',
+        matchedSchemeId: 'micro_finance',
+        schemeRulesVersion: 'rule-v1',
+        emiSchedule: [],
+        dataVintage: {},
+        createdAt: new Date(),
+      }),
+    })
+    await expect(getReportById(deps, 'applicant-1', 'applicant', 'report-1')).rejects.toThrow(ForbiddenError)
+  })
+
+  it('lets any officer read any report regardless of ownership', async () => {
+    const deps = makeDeps({
+      getReportById: async () => ({
+        id: 'report-1',
+        applicantId: 'someone-else',
+        inputs: {},
+        score: 50,
+        verdictKey: 'verdict.marginal',
+        matchedSchemeId: 'micro_finance',
+        schemeRulesVersion: 'rule-v1',
+        emiSchedule: [],
+        dataVintage: {},
+        createdAt: new Date(),
+      }),
+    })
+    await expect(getReportById(deps, 'officer-1', 'officer', 'report-1')).resolves.toMatchObject({ id: 'report-1' })
   })
 })

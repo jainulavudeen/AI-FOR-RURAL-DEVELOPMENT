@@ -99,6 +99,20 @@ export interface FeedbackDeps {
   ) => Promise<Appeal>
   getApplicantPhone: (applicantId: string) => Promise<string | null>
   cpgrams: CpgramsAdapter
+  getReportById: (reportId: string) => Promise<StoredReport | null>
+}
+
+export interface StoredReport {
+  id: string
+  applicantId: string
+  inputs: Record<string, unknown>
+  score: number
+  verdictKey: string
+  matchedSchemeId: string
+  schemeRulesVersion: string
+  emiSchedule: unknown
+  dataVintage: Record<string, unknown>
+  createdAt: Date
 }
 
 export async function createFlag(deps: FeedbackDeps, applicantId: string, body: FlagRequestBody) {
@@ -163,6 +177,27 @@ export async function saveReport(deps: FeedbackDeps, applicantId: string, body: 
     emiSchedule: body.emiSchedule,
     dataVintage: buildDataVintage(body, rule.version),
   })
+}
+
+// Returns the exact snapshot stored at insert time — score, matchedSchemeId,
+// emiSchedule, schemeRulesVersion never get recomputed against whatever
+// scheme_rules is "current" now. This is what makes a report reproducible
+// by construction (CLAUDE.md: "a report generated under rule-set vN must
+// stay reproducible after vN+1 ships") — there is no code path here (or
+// anywhere else in this file) that ever UPDATEs those columns after
+// insertReport/saveReport first writes them.
+export async function getReportById(
+  deps: FeedbackDeps,
+  requesterId: string,
+  requesterRole: string,
+  reportId: string
+): Promise<StoredReport> {
+  const report = await deps.getReportById(reportId)
+  if (!report) throw new NotFoundError('Report not found')
+  if (requesterRole !== 'officer' && report.applicantId !== requesterId) {
+    throw new ForbiddenError('Cannot view a report you do not own')
+  }
+  return report
 }
 
 export async function getOfficerQueue(deps: FeedbackDeps, officerRole: string, officerId: string): Promise<QueueItem[]> {

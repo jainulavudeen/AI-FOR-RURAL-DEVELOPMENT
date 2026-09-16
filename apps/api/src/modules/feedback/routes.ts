@@ -9,6 +9,7 @@ import {
   createAppeal,
   createFlag,
   getOfficerQueue as getOfficerQueueService,
+  getReportById as getReportByIdService,
   saveReport,
   sweepSlaBreaches,
   updateAppealStatus,
@@ -159,6 +160,23 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
       const [row] = await fastify.db.select({ phone: applicants.phone }).from(applicants).where(eq(applicants.id, applicantId)).limit(1)
       return row?.phone ?? null
     },
+
+    getReportById: async (reportId) => {
+      const [row] = await fastify.db.select().from(reports).where(eq(reports.id, reportId)).limit(1)
+      if (!row) return null
+      return {
+        id: row.id,
+        applicantId: row.applicantId,
+        inputs: row.inputs as Record<string, unknown>,
+        score: row.score,
+        verdictKey: row.verdictKey,
+        matchedSchemeId: row.matchedSchemeId,
+        schemeRulesVersion: row.schemeRulesVersion,
+        emiSchedule: row.emiSchedule,
+        dataVintage: row.dataVintage as Record<string, unknown>,
+        createdAt: row.createdAt,
+      }
+    },
   }
 
   fastify.post<{ Body: FlagRequestBody }>('/flag', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -204,6 +222,16 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/appeals/sweep-sla', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const escalated = await sweepSlaBreaches(deps, request.user.role)
     return reply.status(200).send(escalated)
+  })
+
+  // Re-opens a previously generated report exactly as it was saved — the
+  // reproducibility guarantee CLAUDE.md's scheme-rules versioning exists
+  // for (see service.ts's getReportById doc comment). No field here is
+  // ever recomputed against whatever scheme_rules is "current" at read
+  // time; it's a straight SELECT of the row insertReport/saveReport wrote.
+  fastify.get<{ Params: { id: string } }>('/reports/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const report = await getReportByIdService(deps, request.user.sub, request.user.role, request.params.id)
+    return reply.status(200).send(report)
   })
 
   fastify.get('/queue', { preHandler: [fastify.authenticate] }, async (request, reply) => {
