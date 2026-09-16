@@ -75,6 +75,23 @@ export default defineConfig({
               },
             },
           },
+          {
+            // Geotagged site-capture uploads (compressed photo + DIGIPIN,
+            // see components/SiteCaptureCard.jsx) — same background-sync
+            // shape as the feedback queue above, coupled to
+            // lib/siteCapture.js's uploadSiteCapture. A separate queue name
+            // so a large queued photo upload can't starve the smaller
+            // flag/appeal queue's retry budget.
+            urlPattern: ({ url }) => url.pathname === '/site-capture',
+            method: 'POST',
+            handler: 'NetworkOnly',
+            options: {
+              backgroundSync: {
+                name: 'setu-site-capture-queue',
+                options: { maxRetentionTime: 24 * 60 },
+              },
+            },
+          },
         ],
       },
     }),

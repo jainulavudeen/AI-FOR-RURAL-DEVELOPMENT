@@ -16,6 +16,10 @@ const envSchema = z.object({
   // Kept as an explicit switch anyway, same shape as the other providers,
   // so a future real integration slots in without touching call sites.
   ACCOUNT_AGGREGATOR_PROVIDER: z.enum(['mock']).default('mock'),
+  // Same posture: CPGRAMS (pgportal.gov.in) is real government grievance
+  // infrastructure with no credentials/partnership here — mock only. See
+  // modules/feedback/cpgramsAdapter.ts.
+  CPGRAMS_PROVIDER: z.enum(['mock']).default('mock'),
   // Comma-separated allowed origins, or '*' for any (dev default) — the
   // PWA and the API are separate origins, so without this every browser
   // call is blocked by CORS before it ever reaches a route.

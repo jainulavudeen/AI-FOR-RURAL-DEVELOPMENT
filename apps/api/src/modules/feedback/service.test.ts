@@ -1,12 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { CpgramsAdapter } from './cpgramsAdapter'
+import { SLA_BREACH_HOURS } from './escalation'
 import {
+  ConflictError,
   ForbiddenError,
   NotFoundError,
+  applicantEscalateAppeal,
   assertOfficer,
   createAppeal,
   createFlag,
   getOfficerQueue,
   pickOfficerByLoad,
+  sweepSlaBreaches,
   updateAppealStatus,
   type Appeal,
   type FeedbackDeps,
@@ -20,10 +25,17 @@ function makeAppeal(overrides: Partial<Appeal> = {}): Appeal {
     status: 'pending',
     assignedOfficerId: 'officer-1',
     resolutionNote: null,
+    escalatedAt: null,
+    escalationReason: null,
+    cpgramsReferenceId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
   }
+}
+
+function makeMockCpgrams(): CpgramsAdapter {
+  return { fileGrievance: vi.fn(async () => ({ referenceId: 'MOCK-CPGRAMS-TEST1234', filedAt: new Date().toISOString() })) }
 }
 
 function makeDeps(overrides: Partial<FeedbackDeps> = {}): FeedbackDeps {
@@ -36,6 +48,10 @@ function makeDeps(overrides: Partial<FeedbackDeps> = {}): FeedbackDeps {
     getOfficerQueue: async () => [],
     getAppealById: async () => makeAppeal(),
     updateAppeal: async (_id, body) => makeAppeal({ status: body.status, resolutionNote: body.resolutionNote ?? null }),
+    getOpenAppeals: async () => [],
+    updateAppealEscalation: async (id, input) => makeAppeal({ id, status: 'escalated', ...input }),
+    getApplicantPhone: async () => '+919999900002',
+    cpgrams: makeMockCpgrams(),
     ...overrides,
   }
 }
@@ -197,5 +213,52 @@ describe('updateAppealStatus', () => {
     await expect(updateAppealStatus(deps, 'officer', 'officer-1', 'missing', { status: 'resolved' })).rejects.toThrow(
       NotFoundError
     )
+  })
+})
+
+describe('applicantEscalateAppeal', () => {
+  it('escalates the applicant\'s own open appeal via the CPGRAMS adapter', async () => {
+    const cpgrams = makeMockCpgrams()
+    const deps = makeDeps({ getAppealById: async () => makeAppeal({ status: 'in_review' }), cpgrams })
+    const result = await applicantEscalateAppeal(deps, 'applicant-1', 'appeal-1')
+    expect(result.status).toBe('escalated')
+    expect(result.cpgramsReferenceId).toBe('MOCK-CPGRAMS-TEST1234')
+    expect(cpgrams.fileGrievance).toHaveBeenCalledWith(expect.objectContaining({ reason: 'applicant_requested' }))
+  })
+
+  it('refuses to escalate someone else\'s appeal', async () => {
+    const deps = makeDeps({ getAppealById: async () => makeAppeal({ applicantId: 'someone-else' }) })
+    await expect(applicantEscalateAppeal(deps, 'applicant-1', 'appeal-1')).rejects.toThrow(ForbiddenError)
+  })
+
+  it('refuses to escalate an already-resolved appeal', async () => {
+    const deps = makeDeps({ getAppealById: async () => makeAppeal({ status: 'resolved' }) })
+    await expect(applicantEscalateAppeal(deps, 'applicant-1', 'appeal-1')).rejects.toThrow(ConflictError)
+  })
+
+  it('404s on a missing appeal', async () => {
+    const deps = makeDeps({ getAppealById: async () => null })
+    await expect(applicantEscalateAppeal(deps, 'applicant-1', 'appeal-1')).rejects.toThrow(NotFoundError)
+  })
+})
+
+describe('sweepSlaBreaches', () => {
+  it('escalates only the appeals past the SLA window, leaving fresh ones alone', async () => {
+    const now = new Date('2026-02-01T00:00:00Z')
+    const stale = makeAppeal({ id: 'stale', createdAt: new Date(now.getTime() - (SLA_BREACH_HOURS + 1) * 60 * 60 * 1000) })
+    const fresh = makeAppeal({ id: 'fresh', createdAt: new Date(now.getTime() - 1 * 60 * 60 * 1000) })
+    const cpgrams = makeMockCpgrams()
+    const deps = makeDeps({ getOpenAppeals: async () => [stale, fresh], cpgrams })
+
+    const escalated = await sweepSlaBreaches(deps, 'officer', now)
+
+    expect(escalated).toHaveLength(1)
+    expect(cpgrams.fileGrievance).toHaveBeenCalledTimes(1)
+    expect(cpgrams.fileGrievance).toHaveBeenCalledWith(expect.objectContaining({ reason: 'sla_breach' }))
+  })
+
+  it('is officer-only', async () => {
+    const deps = makeDeps()
+    await expect(sweepSlaBreaches(deps, 'applicant')).rejects.toThrow(ForbiddenError)
   })
 })

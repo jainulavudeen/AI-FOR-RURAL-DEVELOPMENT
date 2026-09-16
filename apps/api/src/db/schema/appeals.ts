@@ -17,6 +17,13 @@ export const appeals = pgTable(
     status: text('status').notNull().default('pending'),
     assignedOfficerId: uuid('assigned_officer_id').references(() => applicants.id),
     resolutionNote: text('resolution_note'),
+    // CPGRAMS escalation state (see modules/feedback/escalation.ts). These
+    // three are only ever set together, by escalateAppeal — never by the
+    // generic officer status-update endpoint (escalation is a distinct
+    // action with its own audit trail, not just another status value).
+    escalatedAt: timestamp('escalated_at', { withTimezone: true }),
+    escalationReason: text('escalation_reason'),
+    cpgramsReferenceId: text('cpgrams_reference_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -25,7 +32,11 @@ export const appeals = pgTable(
     index('appeals_officer_id_idx').on(table.assignedOfficerId),
     check(
       'appeals_status_check',
-      sql`${table.status} in ('pending', 'assigned', 'in_review', 'resolved', 'rejected')`
+      sql`${table.status} in ('pending', 'assigned', 'in_review', 'resolved', 'rejected', 'escalated')`
+    ),
+    check(
+      'appeals_escalation_reason_check',
+      sql`${table.escalationReason} is null or ${table.escalationReason} in ('sla_breach', 'applicant_requested')`
     ),
   ]
 )

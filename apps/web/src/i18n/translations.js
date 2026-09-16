@@ -464,6 +464,37 @@ const en = {
     schemeDistributionTitle: 'What they were matched to',
     privacyNote: 'Shown only once at least 5 anonymised applicants share your business type, district and score band — no individual is ever identifiable.',
   },
+  siteCapture: {
+    title: 'Add Site Evidence',
+    body: 'A photo of your proposed business site, pinned with its exact DIGIPIN location, gives your Common Service Centre officer real evidence to verify — not just your word for it.',
+    consentLabel: 'I agree to share this photo and my current location with Setu and the reviewing officer.',
+    cta: 'Capture Site Photo',
+    working: 'Preparing…',
+    sent: 'Saved — attached to your report.',
+    queued: "Saved. You're offline — this will upload the moment you're back online.",
+    noGeolocation: 'Location is not available on this device, so site evidence cannot be captured here.',
+    error: {
+      generic: 'Something went wrong — please try again.',
+      locationDenied: 'Location access was denied — allow location access to capture site evidence.',
+      outOfBounds: 'This location is outside the DIGIPIN coverage area.',
+    },
+  },
+  escalation: {
+    cta: 'Not hearing back? Escalate to CPGRAMS',
+    sending: 'Escalating…',
+    done: 'Escalated to CPGRAMS — reference {{referenceId}}.',
+    error: "Couldn't escalate — please try again.",
+  },
+  marketplace: {
+    title: 'Where to Sell',
+    subtitle: 'Once your business is running, these official platforms can help you find buyers.',
+    ondcName: 'ONDC — Open Network for Digital Commerce',
+    ondcDesc: 'List your business on an open, non-exclusive digital marketplace network.',
+    enamName: 'e-NAM — National Agriculture Market',
+    enamDesc: 'Sell agricultural produce directly to buyers across India at transparent prices.',
+    gemName: 'GeM — Government e-Marketplace',
+    gemDesc: 'Sell directly to government departments and public sector buyers.',
+  },
 }
 
 const hi = {
@@ -928,6 +959,37 @@ const hi = {
     schemeDistributionTitle: 'उन्हें किन योजनाओं से जोड़ा गया',
     privacyNote: 'यह तभी दिखाया जाता है जब आपके व्यवसाय प्रकार, ज़िले और स्कोर श्रेणी से मेल खाने वाले कम से कम 5 अनाम आवेदक हों — किसी भी व्यक्ति की पहचान कभी उजागर नहीं होती।',
   },
+  siteCapture: {
+    title: 'स्थल प्रमाण जोड़ें',
+    body: 'आपकी प्रस्तावित व्यवसाय स्थल की एक तस्वीर, उसके सटीक डिजिपिन स्थान के साथ, आपके कॉमन सर्विस सेंटर अधिकारी को सत्यापित करने के लिए वास्तविक प्रमाण देती है — केवल आपकी बात पर नहीं।',
+    consentLabel: 'मैं यह तस्वीर और अपना वर्तमान स्थान सेतु और समीक्षक अधिकारी के साथ साझा करने के लिए सहमत हूं।',
+    cta: 'स्थल की तस्वीर लें',
+    working: 'तैयार किया जा रहा है…',
+    sent: 'सहेजा गया — आपकी रिपोर्ट से जोड़ा गया।',
+    queued: 'सहेजा गया। आप ऑफ़लाइन हैं — ऑनलाइन होते ही यह अपलोड हो जाएगा।',
+    noGeolocation: 'इस डिवाइस पर स्थान उपलब्ध नहीं है, इसलिए यहां स्थल प्रमाण दर्ज नहीं किया जा सकता।',
+    error: {
+      generic: 'कुछ गलत हो गया — कृपया पुनः प्रयास करें।',
+      locationDenied: 'स्थान पहुंच अस्वीकृत कर दी गई — स्थल प्रमाण दर्ज करने के लिए स्थान पहुंच की अनुमति दें।',
+      outOfBounds: 'यह स्थान डिजिपिन कवरेज क्षेत्र के बाहर है।',
+    },
+  },
+  escalation: {
+    cta: 'जवाब नहीं मिल रहा? सीपीग्राम्स में एस्केलेट करें',
+    sending: 'एस्केलेट किया जा रहा है…',
+    done: 'सीपीग्राम्स में एस्केलेट किया गया — संदर्भ {{referenceId}}।',
+    error: 'एस्केलेट नहीं हो सका — कृपया पुनः प्रयास करें।',
+  },
+  marketplace: {
+    title: 'कहां बेचें',
+    subtitle: 'आपका व्यवसाय शुरू होने के बाद, ये आधिकारिक प्लेटफ़ॉर्म खरीदार खोजने में मदद कर सकते हैं।',
+    ondcName: 'ओएनडीसी — डिजिटल वाणिज्य के लिए खुला नेटवर्क',
+    ondcDesc: 'अपने व्यवसाय को एक खुले, गैर-विशिष्ट डिजिटल बाज़ार नेटवर्क पर सूचीबद्ध करें।',
+    enamName: 'ई-नाम — राष्ट्रीय कृषि बाज़ार',
+    enamDesc: 'पूरे भारत में पारदर्शी कीमतों पर खरीदारों को सीधे कृषि उपज बेचें।',
+    gemName: 'जेम — सरकारी ई-मार्केटप्लेस',
+    gemDesc: 'सरकारी विभागों और सार्वजनिक क्षेत्र के खरीदारों को सीधे बेचें।',
+  },
 }
 
 const ta = {
@@ -1391,6 +1453,37 @@ const ta = {
     medianScore: 'வழக்கமான சாத்தியக்கூறு மதிப்பெண்: {{score}}/100',
     schemeDistributionTitle: 'அவர்கள் எந்தத் திட்டங்களுடன் பொருத்தப்பட்டனர்',
     privacyNote: 'உங்கள் தொழில் வகை, மாவட்டம் மற்றும் மதிப்பெண் வரம்பைப் பொருத்தமான குறைந்தது 5 அநாமதேய விண்ணப்பதாரர்கள் இருந்தால் மட்டுமே இது காட்டப்படும் — எந்த தனிநபரும் ஒருபோதும் அடையாளம் காணப்பட மாட்டார்.',
+  },
+  siteCapture: {
+    title: 'தள ஆதாரத்தைச் சேர்க்கவும்',
+    body: 'உங்கள் முன்மொழியப்பட்ட தொழில் தளத்தின் புகைப்படம், அதன் துல்லியமான டிஜிபின் இருப்பிடத்துடன், உங்கள் பொதுச் சேவை மையம் அதிகாரிக்கு சரிபார்க்க உண்மையான ஆதாரத்தைத் தருகிறது — வெறும் உங்கள் வார்த்தையை மட்டும் அல்ல.',
+    consentLabel: 'இந்த புகைப்படத்தையும் எனது தற்போதைய இருப்பிடத்தையும் சேது மற்றும் மதிப்பாய்வு அதிகாரியுடன் பகிர ஒப்புக்கொள்கிறேன்.',
+    cta: 'தள புகைப்படம் எடுக்கவும்',
+    working: 'தயாரிக்கப்படுகிறது…',
+    sent: 'சேமிக்கப்பட்டது — உங்கள் அறிக்கையுடன் இணைக்கப்பட்டது.',
+    queued: 'சேமிக்கப்பட்டது. நீங்கள் ஆஃப்லைனில் உள்ளீர்கள் — ஆன்லைனுக்கு திரும்பியவுடன் இது பதிவேற்றப்படும்.',
+    noGeolocation: 'இந்த சாதனத்தில் இருப்பிடம் கிடைக்கவில்லை, எனவே இங்கு தள ஆதாரத்தைப் பதிவு செய்ய முடியாது.',
+    error: {
+      generic: 'ஏதோ தவறு நடந்தது — மீண்டும் முயற்சிக்கவும்.',
+      locationDenied: 'இருப்பிட அணுகல் மறுக்கப்பட்டது — தள ஆதாரத்தைப் பதிவு செய்ய இருப்பிட அணுகலை அனுமதிக்கவும்.',
+      outOfBounds: 'இந்த இருப்பிடம் டிஜிபின் கவரேஜ் பகுதிக்கு வெளியே உள்ளது.',
+    },
+  },
+  escalation: {
+    cta: 'பதில் இல்லையா? சிபிகிராம்ஸுக்கு அனுப்புங்கள்',
+    sending: 'அனுப்பப்படுகிறது…',
+    done: 'சிபிகிராம்ஸுக்கு அனுப்பப்பட்டது — குறிப்பு எண் {{referenceId}}.',
+    error: 'அனுப்ப முடியவில்லை — மீண்டும் முயற்சிக்கவும்.',
+  },
+  marketplace: {
+    title: 'எங்கு விற்பது',
+    subtitle: 'உங்கள் தொழில் தொடங்கியவுடன், இந்த அதிகாரப்பூர்வ தளங்கள் வாங்குபவர்களைக் கண்டறிய உதவும்.',
+    ondcName: 'ஓஎன்டிசி — டிஜிட்டல் வணிகத்திற்கான திறந்த வலையமைப்பு',
+    ondcDesc: 'உங்கள் தொழிலை ஒரு திறந்த, பிரத்தியேகமற்ற டிஜிட்டல் சந்தை வலையமைப்பில் பட்டியலிடுங்கள்.',
+    enamName: 'இ-நாம் — தேசிய வேளாண் சந்தை',
+    enamDesc: 'இந்தியா முழுவதும் வெளிப்படையான விலைகளில் வேளாண் உற்பத்திகளை நேரடியாக வாங்குபவர்களுக்கு விற்கவும்.',
+    gemName: 'ஜெம் — அரசு இ-மார்க்கெட்பிளேஸ்',
+    gemDesc: 'அரசு துறைகள் மற்றும் பொதுத்துறை வாங்குபவர்களுக்கு நேரடியாக விற்கவும்.',
   },
 }
 

@@ -3,6 +3,8 @@
 // write. Dependencies are injected (not imported directly) so the
 // round-robin/authorization logic is testable without a live Postgres —
 // same pattern as modules/auth/service.ts.
+import type { CpgramsAdapter } from './cpgramsAdapter'
+import { canApplicantEscalate, isSlaBreached, type EscalationReason } from './escalation'
 import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types'
 
 export class ForbiddenError extends Error {
@@ -20,6 +22,15 @@ export class NotFoundError extends Error {
   constructor(message = 'Not found') {
     super(message)
     this.name = 'NotFoundError'
+  }
+}
+
+export class ConflictError extends Error {
+  statusCode = 409
+  code = 'CONFLICT'
+  constructor(message: string) {
+    super(message)
+    this.name = 'ConflictError'
   }
 }
 
@@ -46,6 +57,9 @@ export interface Appeal {
   status: AppealStatus
   assignedOfficerId: string | null
   resolutionNote: string | null
+  escalatedAt: Date | null
+  escalationReason: EscalationReason | null
+  cpgramsReferenceId: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -78,6 +92,13 @@ export interface FeedbackDeps {
   getOfficerQueue: (officerId: string) => Promise<QueueItem[]>
   getAppealById: (appealId: string) => Promise<Appeal | null>
   updateAppeal: (appealId: string, body: UpdateAppealBody) => Promise<Appeal>
+  getOpenAppeals: () => Promise<Appeal[]>
+  updateAppealEscalation: (
+    appealId: string,
+    input: { escalatedAt: Date; escalationReason: EscalationReason; cpgramsReferenceId: string }
+  ) => Promise<Appeal>
+  getApplicantPhone: (applicantId: string) => Promise<string | null>
+  cpgrams: CpgramsAdapter
 }
 
 export async function createFlag(deps: FeedbackDeps, applicantId: string, body: FlagRequestBody) {
@@ -165,4 +186,60 @@ export async function updateAppealStatus(
   }
 
   return deps.updateAppeal(appealId, body)
+}
+
+// One shared path for both escalation triggers (applicant-initiated and
+// SLA-breach sweep) — see escalation.ts for the state-machine rules this
+// enforces, and cpgramsAdapter.ts for what actually "escalating to
+// CPGRAMS" means today (a mock).
+async function escalateAppeal(deps: FeedbackDeps, appeal: Appeal, reason: EscalationReason): Promise<Appeal> {
+  if (!canApplicantEscalate(appeal)) {
+    throw new ConflictError(`Appeal ${appeal.id} is already in a terminal state ("${appeal.status}") and cannot be escalated`)
+  }
+
+  const phone = await deps.getApplicantPhone(appeal.applicantId)
+  const filing = await deps.cpgrams.fileGrievance({
+    applicantPhone: phone ?? 'unknown',
+    subject: `Setu advisory report review — appeal ${appeal.id}`,
+    description:
+      reason === 'sla_breach'
+        ? `No resolution within ${appeal.createdAt.toISOString()} + SLA window — auto-escalated.`
+        : 'Applicant requested escalation beyond the internal review queue.',
+    reason,
+  })
+
+  return deps.updateAppealEscalation(appeal.id, {
+    escalatedAt: new Date(filing.filedAt),
+    escalationReason: reason,
+    cpgramsReferenceId: filing.referenceId,
+  })
+}
+
+// Applicant-initiated escalation — the applicant escalating their OWN
+// still-open appeal. No minimum wait enforced (see escalation.ts's
+// canApplicantEscalate comment).
+export async function applicantEscalateAppeal(deps: FeedbackDeps, applicantId: string, appealId: string): Promise<Appeal> {
+  const appeal = await deps.getAppealById(appealId)
+  if (!appeal) throw new NotFoundError('Appeal not found')
+  if (appeal.applicantId !== applicantId) {
+    throw new ForbiddenError('Only the applicant who filed this appeal may escalate it')
+  }
+  return escalateAppeal(deps, appeal, 'applicant_requested')
+}
+
+// Officer-triggered SLA sweep — scans every open appeal and escalates the
+// ones past SLA_BREACH_HOURS. Not wired to any scheduler in this repo (no
+// cron/task-queue infra exists here) — exposed as an officer-triggerable
+// action instead, which is honest about what's real today: a genuine
+// deployment would run this on a timer, not by an officer remembering to
+// click a button. See HANDOVER.md.
+export async function sweepSlaBreaches(deps: FeedbackDeps, officerRole: string, now: Date = new Date()): Promise<Appeal[]> {
+  assertOfficer(officerRole)
+  const open = await deps.getOpenAppeals()
+  const breached = open.filter((appeal) => isSlaBreached(appeal, now))
+  const escalated: Appeal[] = []
+  for (const appeal of breached) {
+    escalated.push(await escalateAppeal(deps, appeal, 'sla_breach'))
+  }
+  return escalated
 }

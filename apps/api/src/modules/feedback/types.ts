@@ -22,7 +22,7 @@ export interface AppealRequestBody {
   marginCapitalSource?: 'self_reported' | 'aa'
 }
 
-export type AppealStatus = 'pending' | 'assigned' | 'in_review' | 'resolved' | 'rejected'
+export type AppealStatus = 'pending' | 'assigned' | 'in_review' | 'resolved' | 'rejected' | 'escalated'
 
 export interface UpdateAppealBody {
   status: AppealStatus

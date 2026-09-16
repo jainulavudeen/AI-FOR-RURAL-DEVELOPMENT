@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { DigipinOutOfBoundsError, encodeDigipin } from '../../ingestion/digipin/algorithm'
 import { narrateReport } from '../grounding/service'
 import { createAgmarknetProvider } from './agmarknetProvider'
 import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache'
@@ -90,6 +91,30 @@ const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.header('Cache-Control', `public, max-age=${PEER_BENCHMARK_MAX_AGE}`).status(200).send(result)
     }
   )
+
+  // Reuses the exact same tested DIGIPIN algorithm the ingestion pipeline
+  // already relies on (apps/api/src/ingestion/digipin/algorithm.ts) —
+  // never forked, per CLAUDE.md rule 1's spirit (this isn't a rupee figure,
+  // but the same "one source of truth" logic applies). Unauthenticated:
+  // pure coordinate math, not personal data by itself, same class as the
+  // other public GETs here. The site-capture module (modules/siteCapture)
+  // is what actually persists a DIGIPIN alongside consent + a photo.
+  fastify.get<{ Querystring: { lat?: string; lon?: string } }>('/digipin', async (request, reply) => {
+    const lat = Number(request.query.lat)
+    const lon = Number(request.query.lon)
+    if (!request.query.lat || !request.query.lon || Number.isNaN(lat) || Number.isNaN(lon)) {
+      return reply.status(400).send({ error: { message: 'lat and lon are required numbers', code: 'BAD_REQUEST' } })
+    }
+    try {
+      const digipin = encodeDigipin(lat, lon)
+      return reply.status(200).send({ digipin })
+    } catch (err) {
+      if (err instanceof DigipinOutOfBoundsError) {
+        return reply.status(400).send({ error: { message: err.message, code: 'OUT_OF_BOUNDS' } })
+      }
+      throw err
+    }
+  })
 }
 
 export default feasibilityRoutes

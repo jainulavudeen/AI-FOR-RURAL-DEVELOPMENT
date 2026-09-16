@@ -31,6 +31,8 @@ import CostOfInactionCard from '../components/CostOfInactionCard'
 import AccountAggregatorOptIn from '../components/AccountAggregatorOptIn'
 import MicroLesson from '../components/MicroLesson'
 import PeerBenchmarkCard from '../components/PeerBenchmarkCard'
+import SiteCaptureCard from '../components/SiteCaptureCard'
+import MarketplaceNudge from '../components/MarketplaceNudge'
 import Icon from '../components/Icon'
 
 const SIM_MIN_MARGIN = 5000
@@ -128,10 +130,12 @@ export default function Results() {
 
   // Best-effort, silent persistence of every completed report a logged-in
   // applicant views — not just the ones they appeal. Feeds the peer
-  // benchmark's cohort (PeerBenchmarkCard below); see lib/feedback.js's
-  // saveReport for why this is never queued/retried like the appeal flow.
-  // Fires once per distinct report (business/district/block/margin/score
+  // benchmark's cohort (PeerBenchmarkCard below) and gives SiteCaptureCard
+  // a real reportId to attach evidence to; see lib/feedback.js's saveReport
+  // for why this is never queued/retried like the appeal flow. Fires once
+  // per distinct report (business/district/block/margin/score
   // combination), not on every render.
+  const [savedReportId, setSavedReportId] = useState(null)
   useEffect(() => {
     if (!isAuthenticated || !selection.businessId || !selection.districtId || !selection.blockId) return
     saveReport({
@@ -141,6 +145,8 @@ export default function Results() {
       matchedSchemeId: finance.scheme.id,
       emiSchedule: schedule.rows,
       marginCapitalSource: selection.marginSource,
+    }).then((result) => {
+      if (result.ok) setSavedReportId(result.data)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, selection.businessId, selection.districtId, selection.blockId, selection.margin, feasibility.score])
@@ -245,6 +251,10 @@ export default function Results() {
             districtId={selection.districtId}
             verdictKey={feasibility.verdictKey}
           />
+
+          <SiteCaptureCard reportId={savedReportId} />
+
+          {!needsReview && <MarketplaceNudge />}
 
           {needsReview && (
             <AppealPanel

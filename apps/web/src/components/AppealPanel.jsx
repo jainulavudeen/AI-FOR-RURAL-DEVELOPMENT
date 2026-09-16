@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { ShieldQuestion, Check, Clock, AlertTriangle } from 'lucide-react'
+import { ShieldQuestion, Check, Clock, AlertTriangle, ArrowUpRight } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
-import { requestReview } from '../lib/feedback'
+import { requestReview, escalateAppeal } from '../lib/feedback'
 
 // 'idle' | 'sending' | 'sent' | 'queued' | 'error'
 export default function AppealPanel({ inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginSource }) {
   const { t } = useI18n()
   const { isAuthenticated, requestLogin } = useAuth()
   const [state, setState] = useState('idle')
+  const [appealId, setAppealId] = useState(null)
+  // 'idle' | 'sending' | 'done' | 'error'
+  const [escalationState, setEscalationState] = useState('idle')
+  const [cpgramsReferenceId, setCpgramsReferenceId] = useState(null)
 
   const handleClick = async () => {
     if (!isAuthenticated) {
@@ -22,8 +26,24 @@ export default function AppealPanel({ inputs, score, verdictKey, matchedSchemeId
       setState('queued')
     } else if (result.ok) {
       setState('sent')
+      setAppealId(result.data?.id ?? null)
     } else {
       setState('error')
+    }
+  }
+
+  // Only reachable once the appeal was actually saved server-side (not
+  // 'queued' — escalating an appeal Workbox hasn't replayed yet would have
+  // no appealId to escalate).
+  const handleEscalate = async () => {
+    if (!appealId) return
+    setEscalationState('sending')
+    const result = await escalateAppeal(appealId)
+    if (result.ok) {
+      setEscalationState('done')
+      setCpgramsReferenceId(result.data?.cpgramsReferenceId ?? null)
+    } else {
+      setEscalationState('error')
     }
   }
 
@@ -58,6 +78,24 @@ export default function AppealPanel({ inputs, score, verdictKey, matchedSchemeId
         {state === 'sending' && t('results.requestReviewSending')}
         {state === 'idle' && t('results.requestReviewCta')}
       </button>
+
+      {state === 'sent' && appealId && escalationState !== 'done' && (
+        <button
+          type="button"
+          onClick={handleEscalate}
+          disabled={escalationState === 'sending'}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 hover:underline disabled:opacity-50"
+        >
+          <ArrowUpRight size={13} />
+          {escalationState === 'sending' ? t('escalation.sending') : t('escalation.cta')}
+        </button>
+      )}
+      {escalationState === 'error' && <p className="mt-2 text-[11px] text-red-600">{t('escalation.error')}</p>}
+      {escalationState === 'done' && (
+        <p className="mt-3 text-[12px] text-teal-700">
+          {t('escalation.done', { referenceId: cpgramsReferenceId ?? '—' })}
+        </p>
+      )}
     </div>
   )
 }

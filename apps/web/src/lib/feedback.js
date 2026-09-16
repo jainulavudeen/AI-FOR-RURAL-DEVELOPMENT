@@ -47,9 +47,25 @@ export async function saveReport({ inputs, score, verdictKey, matchedSchemeId, e
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource }),
     })
-    return { ok: response.ok }
+    const data = await response.json().catch(() => null)
+    return { ok: response.ok, data: data?.id ?? null }
   } catch {
-    return { ok: false }
+    return { ok: false, data: null }
+  }
+}
+
+// Applicant-initiated CPGRAMS escalation (see apps/api's
+// modules/feedback/escalation.ts) — a real, retryable action the applicant
+// is actively waiting to see confirmed, not a silent background save, so
+// NOT queued like requestReview above: a network failure here should read
+// as "try again," not "queued."
+export async function escalateAppeal(appealId) {
+  try {
+    const response = await authorizedFetch(`/feedback/appeals/${appealId}/escalate`, { method: 'POST' })
+    const data = await response.json().catch(() => ({}))
+    return { ok: response.ok, status: response.status, data }
+  } catch {
+    return { ok: false, status: 0, data: null }
   }
 }
 

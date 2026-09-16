@@ -1,12 +1,16 @@
-import { desc, eq, sql } from 'drizzle-orm'
+import { desc, eq, notInArray, sql } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import { applicants, appeals, feedbackFlags, reports } from '../../db/schema'
 import { getCurrentSchemeRuleVersion } from '../schemeRouter/service'
+import { createCpgramsAdapter } from './cpgramsAdapter'
+import type { EscalationReason } from './escalation'
 import {
+  applicantEscalateAppeal,
   createAppeal,
   createFlag,
   getOfficerQueue as getOfficerQueueService,
   saveReport,
+  sweepSlaBreaches,
   updateAppealStatus,
   type Appeal,
   type FeedbackDeps,
@@ -14,6 +18,10 @@ import {
 } from './service'
 import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types'
 
+// 'escalated' is deliberately excluded — it's only ever reachable through
+// the dedicated escalate/sweep-sla routes below (which record a reason and
+// a CPGRAMS reference), never as an arbitrary value on the generic
+// officer status-update endpoint.
 const VALID_STATUSES: AppealStatus[] = ['pending', 'assigned', 'in_review', 'resolved', 'rejected']
 
 function rowToAppeal(row: typeof appeals.$inferSelect): Appeal {
@@ -24,6 +32,9 @@ function rowToAppeal(row: typeof appeals.$inferSelect): Appeal {
     status: row.status as AppealStatus,
     assignedOfficerId: row.assignedOfficerId,
     resolutionNote: row.resolutionNote,
+    escalatedAt: row.escalatedAt,
+    escalationReason: row.escalationReason as EscalationReason | null,
+    cpgramsReferenceId: row.cpgramsReferenceId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -33,7 +44,10 @@ function rowToAppeal(row: typeof appeals.$inferSelect): Appeal {
 // / apps/api/src/plugins/auth.ts: auth gates saving, appealing, and
 // notifications, never the deterministic calculator.
 const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
+  const cpgrams = createCpgramsAdapter()
+
   const deps: FeedbackDeps = {
+    cpgrams,
     insertFeedbackFlag: async ({ applicantId, sourceTable, sourceRowId, reason }) => {
       const [row] = await fastify.db
         .insert(feedbackFlags)
@@ -122,6 +136,29 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
       if (!row) throw new Error('Failed to update appeal')
       return rowToAppeal(row)
     },
+
+    getOpenAppeals: async () => {
+      const rows = await fastify.db
+        .select()
+        .from(appeals)
+        .where(notInArray(appeals.status, ['resolved', 'rejected', 'escalated']))
+      return rows.map(rowToAppeal)
+    },
+
+    updateAppealEscalation: async (appealId, { escalatedAt, escalationReason, cpgramsReferenceId }) => {
+      const [row] = await fastify.db
+        .update(appeals)
+        .set({ status: 'escalated', escalatedAt, escalationReason, cpgramsReferenceId, updatedAt: new Date() })
+        .where(eq(appeals.id, appealId))
+        .returning()
+      if (!row) throw new Error('Failed to update appeal escalation')
+      return rowToAppeal(row)
+    },
+
+    getApplicantPhone: async (applicantId) => {
+      const [row] = await fastify.db.select({ phone: applicants.phone }).from(applicants).where(eq(applicants.id, applicantId)).limit(1)
+      return row?.phone ?? null
+    },
   }
 
   fastify.post<{ Body: FlagRequestBody }>('/flag', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -151,6 +188,22 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const report = await saveReport(deps, request.user.sub, { inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource })
     return reply.status(201).send(report)
+  })
+
+  // Applicant-initiated escalation — see service.ts's applicantEscalateAppeal
+  // and escalation.ts for the state machine. Ownership-checked: only the
+  // applicant who filed the appeal may escalate it.
+  fastify.post<{ Params: { id: string } }>('/appeals/:id/escalate', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const appeal = await applicantEscalateAppeal(deps, request.user.sub, request.params.id)
+    return reply.status(200).send(appeal)
+  })
+
+  // Officer-triggered SLA sweep (see service.ts's sweepSlaBreaches for why
+  // this is a button, not a cron, in this repo). Returns every appeal it
+  // escalated this run.
+  fastify.post('/appeals/sweep-sla', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const escalated = await sweepSlaBreaches(deps, request.user.role)
+    return reply.status(200).send(escalated)
   })
 
   fastify.get('/queue', { preHandler: [fastify.authenticate] }, async (request, reply) => {
