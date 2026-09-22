@@ -19,6 +19,10 @@ export {
   type SocialScheme,
 } from './socialSchemes'
 
+export { STATE_SCHEMES, getMatchingStateSchemes, type StateScheme } from './stateSchemes'
+
+export { NATIONAL_SCHEMES, type NationalScheme } from './nationalSchemes'
+
 export {
   BASE_SCORE,
   DEFAULT_BASE_SCORE,
@@ -28,3 +32,16 @@ export {
   classifyVerdict,
   type VerdictKey,
 } from './feasibilityBaseline'
+
+export {
+  getEligibleSchemes,
+  type EligibilityInput,
+  type EligibilityReason,
+  type EligibleScheme,
+  type EligibleGenericScheme,
+  type EligibleSocialScheme,
+  type EligibleStateScheme,
+  type EligibleNationalScheme,
+} from './eligibility'
+
+export { SCHEME_REFERENCES, type SchemeReference } from './schemeReferenceInfo'
