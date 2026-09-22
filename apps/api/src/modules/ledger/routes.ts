@@ -1,6 +1,6 @@
 import { desc, eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import type { LedgerPaymentMode, LedgerTransactionType } from '@setu/core'
+import type { LedgerPaymentMode, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
 import { ledgerTransactions } from '../../db/schema'
 import { getLedgerSummary, listTransactions, recordTransaction, type LedgerDeps } from './service'
 import type { CreateTransactionBody, LedgerTransactionRecord } from './types'
@@ -13,6 +13,7 @@ function rowToRecord(row: typeof ledgerTransactions.$inferSelect): LedgerTransac
     paymentMode: row.paymentMode as LedgerPaymentMode,
     customerName: row.customerName,
     note: row.note,
+    source: row.source as LedgerTransactionSource,
     occurredAt: row.occurredAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
   }

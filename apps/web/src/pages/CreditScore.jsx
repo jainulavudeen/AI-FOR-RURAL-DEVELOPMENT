@@ -285,15 +285,20 @@ function SliderRow({ label, value, max, step, displayValue, onChange }) {
   )
 }
 
-// Udyam registration and a bank-account link have no real server source
-// yet (Shop Profile — a later phase — would persist the former; the
-// latter is approximated from whether the applicant has already opted
-// into Account Aggregator this session, since that's the only bank-linked
-// signal Setu has today). Neither is fabricated: both show clearly as
-// "not yet verified" rather than a guessed checkmark.
+// Udyam registration has no real server source yet (Shop Profile — a
+// later phase — would persist it) and is never fabricated: it shows
+// clearly as "not yet verified" rather than a guessed checkmark.
+// Bank-account linkage has two independent real signals today: opting
+// into Account Aggregator this session, or having at least one
+// bank-statement-verified transaction (summary.bankVerifiedTransactionCount,
+// from the "add a bank statement" upload on Bahi-Khata) — the statement
+// upload is the stronger, document-backed proof, so it's called out with
+// its own sub-text rather than collapsing both into one generic "linked".
 function buildReadinessItems({ summary, selection, t }) {
   const udhaarSharePercent = summary.totalSales > 0 ? (summary.pendingUdhaar / summary.totalSales) * 100 : 0
-  const bankLinked = selection.marginSource === 'aa'
+  const bankStatementVerified = summary.bankVerifiedTransactionCount > 0
+  const aaLinked = selection.marginSource === 'aa'
+  const bankLinked = bankStatementVerified || aaLinked
 
   return [
     {
@@ -324,7 +329,11 @@ function buildReadinessItems({ summary, selection, t }) {
       id: 'bankAccount',
       done: bankLinked,
       title: t('creditScore.readiness.bankAccount.title'),
-      sub: bankLinked ? t('creditScore.readiness.bankAccount.subLinked') : t('creditScore.readiness.bankAccount.subUnlinked'),
+      sub: bankStatementVerified
+        ? t('creditScore.readiness.bankAccount.subStatementVerified', { count: summary.bankVerifiedTransactionCount })
+        : aaLinked
+          ? t('creditScore.readiness.bankAccount.subLinked')
+          : t('creditScore.readiness.bankAccount.subUnlinked'),
     },
   ]
 }

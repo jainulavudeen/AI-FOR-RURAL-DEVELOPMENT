@@ -1,4 +1,4 @@
-import type { LedgerPaymentMode, LedgerTransactionType } from '@setu/core'
+import type { LedgerPaymentMode, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
 
 // applicantId is deliberately absent — always request.user.sub, never
 // client-supplied (same reasoning as siteCapture/types.ts).
@@ -21,6 +21,7 @@ export interface LedgerTransactionRecord {
   paymentMode: LedgerPaymentMode
   customerName: string | null
   note: string | null
+  source: LedgerTransactionSource
   occurredAt: string
   createdAt: string
 }

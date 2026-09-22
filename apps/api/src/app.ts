@@ -8,6 +8,7 @@ import accountAggregatorModule from './modules/accountAggregator'
 import advisorSaathiModule from './modules/advisorSaathi'
 import authModule from './modules/auth'
 import bankDossierModule from './modules/bankDossier'
+import bankStatementModule from './modules/bankStatement'
 import businessTypesModule from './modules/businessTypes'
 import calculatorModule from './modules/calculator'
 import creditScoreModule from './modules/creditScore'
@@ -57,6 +58,7 @@ export function buildApp(): FastifyInstance {
   app.register(advisorSaathiModule, { prefix: '/advisor-saathi' })
   app.register(bankDossierModule, { prefix: '/bank-dossier' })
   app.register(businessTypesModule, { prefix: '/business-types' })
+  app.register(bankStatementModule, { prefix: '/bank-statement' })
 
   return app
 }

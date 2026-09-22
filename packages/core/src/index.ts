@@ -54,6 +54,7 @@ export {
   summarizeLedger,
   type LedgerTransaction,
   type LedgerTransactionType,
+  type LedgerTransactionSource,
   type LedgerPaymentMode,
   type LedgerSummary,
   type MonthBucket,

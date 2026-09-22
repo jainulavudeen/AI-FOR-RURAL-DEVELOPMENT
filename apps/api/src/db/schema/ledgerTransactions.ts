@@ -25,6 +25,10 @@ export const ledgerTransactions = pgTable(
     paymentMode: text('payment_mode').notNull().default('cash'),
     customerName: text('customer_name'),
     note: text('note'),
+    // 'self_reported' (Log Sale) vs 'bank_statement' (extracted from an
+    // uploaded bank-statement PDF — see the bankStatement module). A real,
+    // verifiable-provenance signal distinct from paymentMode.
+    source: text('source').notNull().default('self_reported'),
     // When the transaction actually happened, as reported by the
     // applicant — distinct from createdAt (when the row was written),
     // since an offline-queued entry can be written well after it happened.
@@ -36,5 +40,6 @@ export const ledgerTransactions = pgTable(
     check('ledger_transactions_type_check', sql`${table.type} in ('sale', 'expense', 'udhaar_given', 'udhaar_repaid')`),
     check('ledger_transactions_payment_mode_check', sql`${table.paymentMode} in ('cash', 'upi')`),
     check('ledger_transactions_amount_positive_check', sql`${table.amount} > 0`),
+    check('ledger_transactions_source_check', sql`${table.source} in ('self_reported', 'bank_statement')`),
   ]
 )

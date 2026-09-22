@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionType } from '@setu/core'
+import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
 import { ledgerTransactions } from '../../db/schema'
 import { getCreditScore, type CreditScoreDeps } from './service'
 
@@ -18,6 +18,7 @@ const creditScoreRoutes: FastifyPluginAsync = async (fastify) => {
         paymentMode: row.paymentMode as LedgerPaymentMode,
         occurredAt: row.occurredAt,
         customerName: row.customerName,
+        source: row.source as LedgerTransactionSource,
       }))
     },
   }

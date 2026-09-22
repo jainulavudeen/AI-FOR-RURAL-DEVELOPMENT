@@ -83,6 +83,7 @@ export async function getLedgerSummary(deps: LedgerDeps, applicantId: string, as
     paymentMode: row.paymentMode,
     occurredAt: row.occurredAt,
     customerName: row.customerName,
+    source: row.source,
   }))
   return summarizeLedger(transactions, asOfDate)
 }

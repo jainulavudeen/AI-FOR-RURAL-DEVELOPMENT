@@ -10,6 +10,11 @@
 // "what does this applicant's ledger add up to," never two that could drift.
 export type LedgerTransactionType = 'sale' | 'expense' | 'udhaar_given' | 'udhaar_repaid'
 export type LedgerPaymentMode = 'cash' | 'upi'
+// 'self_reported' (typed in via Log Sale) vs 'bank_statement' (extracted
+// from an uploaded bank-statement PDF — see bankStatement module). Absent
+// on older rows/callers that predate this field; treated as
+// 'self_reported' throughout, never assumed bank-verified by default.
+export type LedgerTransactionSource = 'self_reported' | 'bank_statement'
 
 export interface LedgerTransaction {
   id: string
@@ -18,6 +23,7 @@ export interface LedgerTransaction {
   paymentMode: LedgerPaymentMode
   occurredAt: string | Date
   customerName?: string | null
+  source?: LedgerTransactionSource
 }
 
 export interface MonthBucket {
@@ -52,6 +58,12 @@ export interface LedgerSummary {
   digitalSharePercent: number
   transactionCount: number
   activeDayCount: number
+  // How many of the above transactions came from an uploaded bank
+  // statement rather than being self-typed — a real, verifiable-provenance
+  // signal Bank Dossier and Credit Score can point to, distinct from
+  // simply "was this transaction paid digitally" (paymentMode).
+  bankVerifiedTransactionCount: number
+  bankVerifiedSalesTotal: number
   monthBuckets: MonthBucket[]
 }
 
@@ -114,6 +126,8 @@ export function summarizeLedger(transactions: LedgerTransaction[], asOfDate: Dat
   let totalUdhaarGiven = 0
   let totalUdhaarRepaid = 0
   let digitalSales = 0
+  let bankVerifiedTransactionCount = 0
+  let bankVerifiedSalesTotal = 0
   const activeDays = new Set<string>()
 
   for (const txn of transactions) {
@@ -122,6 +136,11 @@ export function summarizeLedger(transactions: LedgerTransaction[], asOfDate: Dat
     activeDays.add(dayKey)
 
     const bucket = bucketByKey.get(monthKeyOf(occurredAt))
+
+    if (txn.source === 'bank_statement') {
+      bankVerifiedTransactionCount += 1
+      if (txn.type === 'sale') bankVerifiedSalesTotal += txn.amount
+    }
 
     switch (txn.type) {
       case 'sale':
@@ -163,6 +182,8 @@ export function summarizeLedger(transactions: LedgerTransaction[], asOfDate: Dat
     digitalSharePercent: totalSales > 0 ? (digitalSales / totalSales) * 100 : 0,
     transactionCount: transactions.length,
     activeDayCount: activeDays.size,
+    bankVerifiedTransactionCount,
+    bankVerifiedSalesTotal,
     monthBuckets,
   }
 }

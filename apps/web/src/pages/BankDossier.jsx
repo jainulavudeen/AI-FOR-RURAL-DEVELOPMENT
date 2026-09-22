@@ -243,6 +243,15 @@ function DossierView({ dossier, t, language }) {
               [t('bankDossier.debtServiceHeadroomLabel'), `${formatINR(monthlyDebtServiceHeadroom)}/${t('common.month')}`],
             ]}
           />
+          {s.financial.summary.bankVerifiedTransactionCount > 0 && (
+            <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-teal-700">
+              <ShieldCheck size={12} />
+              {t('bankDossier.bankVerifiedNote', {
+                count: s.financial.summary.bankVerifiedTransactionCount,
+                amount: formatINR(s.financial.summary.bankVerifiedSalesTotal),
+              })}
+            </p>
+          )}
         </Section>
 
         <Section number={4} title={t('bankDossier.section4Title')}>

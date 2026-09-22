@@ -21,6 +21,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
     "@fastify/cors": "^11.3.0",
+    "@fastify/multipart": "^10.1.1",
     "@setu/core": "*",
     "csv-parse": "^7.0.2",
     "dotenv": "^16.4.7",
@@ -29,6 +30,7 @@
     "fastify-plugin": "^5.0.1",
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
+    "pdf-parse": "^2.4.5",
     "postgres": "^3.4.5",
     "zod": "^3.24.1"
   },

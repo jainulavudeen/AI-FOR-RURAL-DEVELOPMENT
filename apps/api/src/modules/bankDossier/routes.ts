@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionType } from '@setu/core'
+import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
 import { applicants, bankDossiers, ledgerTransactions } from '../../db/schema'
 import { generateDossier, getDossier, type BankDossierDeps } from './service'
 import type { BankDossierRecord, DossierSnapshot, GenerateDossierBody } from './types'
@@ -31,6 +31,7 @@ const bankDossierRoutes: FastifyPluginAsync = async (fastify) => {
         paymentMode: row.paymentMode as LedgerPaymentMode,
         occurredAt: row.occurredAt,
         customerName: row.customerName,
+        source: row.source as LedgerTransactionSource,
       }))
     },
     getApplicantPhone: async (applicantId) => {

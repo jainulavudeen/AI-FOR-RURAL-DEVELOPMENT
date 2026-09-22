@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { BookOpen, Plus, ShoppingCart, TrendingDown, HandCoins, Undo2, CheckCircle2, WifiOff } from 'lucide-react'
+import { BookOpen, Plus, ShoppingCart, TrendingDown, HandCoins, Undo2, CheckCircle2, WifiOff, ShieldCheck } from 'lucide-react'
 import { summarizeLedger } from '@setu/core'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
@@ -8,6 +8,7 @@ import { getTransactions } from '../lib/ledger'
 import { formatINR } from '../lib/format'
 import StatTile from '../components/StatTile'
 import LogSaleModal from '../components/LogSaleModal'
+import BankStatementUpload from '../components/BankStatementUpload'
 
 const FILTER_TABS = [
   { id: 'all', key: 'bahiKhata.tabAll' },
@@ -70,6 +71,23 @@ export default function BahiKhata() {
       cancelled = true
     }
   }, [isAuthenticated])
+
+  // A bank-statement upload's response is only a summary (count + warnings),
+  // not the inserted rows — unlike LogSaleModal's onSaved, which gets the
+  // real row back from the POST response and can prepend it optimistically,
+  // this refetches the full list so the newly bank-verified transactions
+  // actually appear.
+  const handleStatementUploaded = () => {
+    // No toast here — BankStatementUpload already shows its own detailed
+    // inline result (count extracted, any warnings); a second generic
+    // "Saved" toast on top of that would be redundant.
+    getTransactions().then((result) => {
+      if (result.ok) {
+        setTransactions(result.data)
+        setLoadFailed(false)
+      }
+    })
+  }
 
   useEffect(() => {
     if (!toast) return
@@ -164,6 +182,10 @@ export default function BahiKhata() {
         />
       </div>
 
+      <div className="mt-6">
+        <BankStatementUpload onUploaded={handleStatementUploaded} />
+      </div>
+
       <h2 className="mt-10 mb-3 text-sm font-bold text-primary-900">{t('bahiKhata.trendTitle')}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {summary.monthBuckets.map((bucket) => {
@@ -242,6 +264,12 @@ export default function BahiKhata() {
                     {txn.pending && (
                       <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-semibold text-amber-700">
                         {t('bahiKhata.pendingBadge')}
+                      </span>
+                    )}
+                    {txn.source === 'bank_statement' && (
+                      <span className="inline-flex items-center gap-0.5 rounded bg-teal-600/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-teal-700">
+                        <ShieldCheck size={9} />
+                        {t('bahiKhata.bankVerifiedBadge')}
                       </span>
                     )}
                   </div>
