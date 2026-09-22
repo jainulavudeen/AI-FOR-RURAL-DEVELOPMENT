@@ -49,3 +49,12 @@ export { SCHEME_REFERENCES, type SchemeReference } from './schemeReferenceInfo'
 export { computeMatchScore } from './schemeMatchScore'
 
 export { GENERIC_REQUIRED_DOCUMENTS, SCHEME_DOCUMENT_REQUIREMENTS, getRequiredDocuments } from './schemeDocumentRequirements'
+
+export {
+  summarizeLedger,
+  type LedgerTransaction,
+  type LedgerTransactionType,
+  type LedgerPaymentMode,
+  type LedgerSummary,
+  type MonthBucket,
+} from './ledgerSummary'

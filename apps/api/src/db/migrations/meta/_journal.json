@@ -43,6 +43,13 @@
       "when": 1789548996841,
       "tag": "0005_misty_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790050490961,
+      "tag": "0006_big_harrier",
+      "breakpoints": true
     }
   ]
 }

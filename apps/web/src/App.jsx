@@ -18,6 +18,7 @@ import RouteSkeleton from './components/RouteSkeleton'
 // land on. See RouteSkeleton for the Suspense fallback shown mid-download.
 const Landing = lazy(() => import('./pages/Landing'))
 const Wizard = lazy(() => import('./pages/Wizard'))
+const BahiKhata = lazy(() => import('./pages/BahiKhata'))
 const Results = lazy(() => import('./pages/Results'))
 const Compare = lazy(() => import('./pages/Compare'))
 const SchemeComparison = lazy(() => import('./pages/SchemeComparison'))
@@ -31,6 +32,7 @@ function AnimatedRoutes() {
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<PageTransition><Landing /></PageTransition>} />
         <Route path="/eligibility" element={<PageTransition><Wizard /></PageTransition>} />
+        <Route path="/bahi-khata" element={<PageTransition><BahiKhata /></PageTransition>} />
         <Route path="/results" element={<PageTransition><Results /></PageTransition>} />
         <Route path="/compare" element={<PageTransition><Compare /></PageTransition>} />
         <Route path="/schemes" element={<PageTransition><SchemeComparison /></PageTransition>} />

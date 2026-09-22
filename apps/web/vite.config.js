@@ -92,6 +92,40 @@ export default defineConfig({
               },
             },
           },
+          {
+            // Logging a Bahi-Khata sale/expense/udhaar entry while offline —
+            // the one write this whole app most needs to survive a signal
+            // drop, since it's the daily-use screen. Same NetworkOnly +
+            // backgroundSync shape as feedback's flag/appeal queue above,
+            // its own queue name so it isn't starved by (or doesn't starve)
+            // the others. Coupled with lib/ledger.js's recordTransaction,
+            // which treats a thrown fetch to this exact path as "queued" —
+            // if either changes, check the other.
+            urlPattern: ({ url }) => url.pathname === '/ledger/transactions',
+            method: 'POST',
+            handler: 'NetworkOnly',
+            options: {
+              backgroundSync: {
+                name: 'setu-ledger-queue',
+                options: { maxRetentionTime: 24 * 60 },
+              },
+            },
+          },
+          {
+            // Ledger reads: cached so Bahi-Khata/Credit Score/Dashboard
+            // keep showing the last-known transaction list and summary
+            // instantly offline, refreshed in the background when online —
+            // same StaleWhileRevalidate shape as the feasibility signals
+            // above, just a shorter TTL since this is the applicant's own
+            // fast-changing data, not a slower-moving external dataset.
+            urlPattern: ({ url }) => url.pathname === '/ledger/transactions' || url.pathname === '/ledger/summary',
+            method: 'GET',
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'setu-ledger-reads',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 },
+            },
+          },
         ],
       },
     }),
