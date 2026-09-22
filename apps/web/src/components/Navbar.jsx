@@ -45,6 +45,7 @@ export default function Navbar() {
     { to: '/credit-score', key: 'nav.creditScore' },
     { to: '/advisor-saathi', key: 'nav.advisorSaathi' },
     { to: '/schemes', key: 'nav.schemes' },
+    { to: '/bank-dossier', key: 'nav.bankDossier' },
     { to: '/architecture', key: 'nav.architecture' },
     { to: '/partners', key: 'nav.partners' },
   ]

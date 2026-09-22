@@ -1,4 +1,5 @@
-import { CheckCircle2, XCircle, HelpCircle, ChevronDown, ExternalLink, ShieldAlert } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CheckCircle2, XCircle, HelpCircle, ChevronDown, ExternalLink, ShieldAlert, FileText } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { formatINR } from '../lib/format'
 import Icon from './Icon'
@@ -159,6 +160,15 @@ export default function SchemeEligibilityCard({ item, facts, reference, document
               <ShieldAlert size={12} className="shrink-0 mt-0.5" />
               {t(reference.sourceCaveat === 'mirror' ? 'eligibility.sourceCaveatMirror' : 'eligibility.sourceCaveatSecondary')}
             </p>
+          )}
+          {personalized && eligible && (
+            <Link
+              to={`/bank-dossier?schemeId=${encodeURIComponent(item.id)}`}
+              className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-primary-700 px-4 py-2 text-[12px] font-bold text-white hover:bg-primary-800 transition-colors"
+            >
+              <FileText size={13} />
+              {t('eligibility.printDossierCta')}
+            </Link>
           )}
         </div>
       )}

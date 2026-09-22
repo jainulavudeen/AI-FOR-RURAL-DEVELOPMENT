@@ -7,6 +7,7 @@ import redisPlugin from './plugins/redis'
 import accountAggregatorModule from './modules/accountAggregator'
 import advisorSaathiModule from './modules/advisorSaathi'
 import authModule from './modules/auth'
+import bankDossierModule from './modules/bankDossier'
 import calculatorModule from './modules/calculator'
 import creditScoreModule from './modules/creditScore'
 import feasibilityModule from './modules/feasibility'
@@ -19,15 +20,16 @@ import siteCaptureModule from './modules/siteCapture'
 import ussdModule from './modules/ussd'
 
 // One deployable unit — six original modules plus accountAggregator,
-// siteCapture, ussd, ledger, creditScore and now advisorSaathi, deliberate
-// exceptions (see CLAUDE.md: consented external data acquisition,
-// geotagged evidence capture, a non-smartphone access rail, a daily-use
-// transaction ledger, an explainable alternative-credit score, and now a
-// grounded chat advisor, none of which semantically belong inside any of
-// the original six). advisorSaathi never imports llm/client.ts itself —
-// only grounding/service.ts may (boundary rule 2) — it calls that
-// module's queryWithClaims() export instead, a plain function call within
-// this one deployable unit, not a network hop.
+// siteCapture, ussd, ledger, creditScore, advisorSaathi and now
+// bankDossier, deliberate exceptions (see CLAUDE.md: consented external
+// data acquisition, geotagged evidence capture, a non-smartphone access
+// rail, a daily-use transaction ledger, an explainable alternative-credit
+// score, a grounded chat advisor, and now a frozen-snapshot printable
+// document, none of which semantically belong inside any of the original
+// six). advisorSaathi never imports llm/client.ts itself — only
+// grounding/service.ts may (boundary rule 2) — it calls that module's
+// queryWithClaims() export instead, a plain function call within this one
+// deployable unit, not a network hop.
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: true, trustProxy: true })
 
@@ -52,6 +54,7 @@ export function buildApp(): FastifyInstance {
   app.register(ledgerModule, { prefix: '/ledger' })
   app.register(creditScoreModule, { prefix: '/credit-score' })
   app.register(advisorSaathiModule, { prefix: '/advisor-saathi' })
+  app.register(bankDossierModule, { prefix: '/bank-dossier' })
 
   return app
 }

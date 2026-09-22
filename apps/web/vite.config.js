@@ -126,6 +126,21 @@ export default defineConfig({
               expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 },
             },
           },
+          {
+            // A generated Bank Dossier is immutable (no update route
+            // exists) — so unlike the ledger reads above, a much longer
+            // TTL is correct: reprinting an already-generated dossier
+            // should keep working offline for as long as it's cached.
+            // Only matches GET /bank-dossier/<id>, never the POST
+            // /bank-dossier/generate write.
+            urlPattern: ({ url }) => /^\/bank-dossier\/[0-9a-f-]+$/i.test(url.pathname),
+            method: 'GET',
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'setu-bank-dossier-reads',
+              expiration: { maxEntries: 20, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            },
+          },
         ],
       },
     }),

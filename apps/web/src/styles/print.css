@@ -1,0 +1,23 @@
+/* Bank Dossier's print stylesheet — imported only by BankDossier.jsx (a
+   lazy-loaded route chunk), so it never ships to any other page's bundle.
+   No JS PDF library: window.print() + this stylesheet is the whole
+   mechanism, matching the one existing precedent in this app
+   (Results.jsx's plain window.print() "Download Report" button). */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .dossier-print,
+  .dossier-print * {
+    visibility: visible;
+  }
+  .dossier-print {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

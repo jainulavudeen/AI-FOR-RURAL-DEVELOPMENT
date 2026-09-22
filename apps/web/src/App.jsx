@@ -22,6 +22,7 @@ const BahiKhata = lazy(() => import('./pages/BahiKhata'))
 const CreditScore = lazy(() => import('./pages/CreditScore'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const AdvisorSaathi = lazy(() => import('./pages/AdvisorSaathi'))
+const BankDossier = lazy(() => import('./pages/BankDossier'))
 const Results = lazy(() => import('./pages/Results'))
 const Compare = lazy(() => import('./pages/Compare'))
 const SchemeComparison = lazy(() => import('./pages/SchemeComparison'))
@@ -39,6 +40,8 @@ function AnimatedRoutes() {
         <Route path="/bahi-khata" element={<PageTransition><BahiKhata /></PageTransition>} />
         <Route path="/credit-score" element={<PageTransition><CreditScore /></PageTransition>} />
         <Route path="/advisor-saathi" element={<PageTransition><AdvisorSaathi /></PageTransition>} />
+        <Route path="/bank-dossier" element={<PageTransition><BankDossier /></PageTransition>} />
+        <Route path="/bank-dossier/:id" element={<PageTransition><BankDossier /></PageTransition>} />
         <Route path="/results" element={<PageTransition><Results /></PageTransition>} />
         <Route path="/compare" element={<PageTransition><Compare /></PageTransition>} />
         <Route path="/schemes" element={<PageTransition><SchemeComparison /></PageTransition>} />

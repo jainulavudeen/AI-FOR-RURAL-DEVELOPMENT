@@ -131,6 +131,15 @@ function BahiKhataSkeleton() {
   )
 }
 
+function BankDossierSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14">
+      <Skeleton className="h-8 w-56 mx-auto mb-8" />
+      <Skeleton className="h-[600px] w-full rounded-3xl" />
+    </div>
+  )
+}
+
 function AdvisorSaathiSkeleton() {
   return (
     <div className="mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14">
@@ -307,6 +316,7 @@ export default function RouteSkeleton() {
   if (pathname === '/bahi-khata') return <BahiKhataSkeleton />
   if (pathname === '/credit-score') return <CreditScoreSkeleton />
   if (pathname === '/advisor-saathi') return <AdvisorSaathiSkeleton />
+  if (pathname === '/bank-dossier' || pathname.startsWith('/bank-dossier/')) return <BankDossierSkeleton />
   if (pathname === '/architecture') return <ArchitectureSkeleton />
   return <FormSkeleton />
 }
