@@ -79,3 +79,5 @@ export {
   type LoanSanctionProbability,
   type LoanSanctionProbabilityLabelKey,
 } from './loanSanctionProbability'
+
+export { FESTIVAL_CALENDAR, getUpcomingFestivals, type FestivalEvent, type UpcomingFestival } from './festivalCalendar'

@@ -39,6 +39,7 @@ export default function Navbar() {
 
   const links = [
     { to: '/', key: 'nav.home', end: true },
+    { to: '/dashboard', key: 'nav.dashboard' },
     { to: '/eligibility', key: 'nav.checkEligibility' },
     { to: '/bahi-khata', key: 'nav.bahiKhata' },
     { to: '/credit-score', key: 'nav.creditScore' },

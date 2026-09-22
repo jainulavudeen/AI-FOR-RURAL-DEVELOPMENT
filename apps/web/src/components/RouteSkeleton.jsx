@@ -84,6 +84,19 @@ function ResultsSkeleton() {
   )
 }
 
+function DashboardSkeleton() {
+  return (
+    <div className="mx-auto max-w-5xl px-5 sm:px-8 py-10 sm:py-14">
+      <Skeleton className="h-40 w-full rounded-3xl" />
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Skeleton className="h-64 w-full rounded-3xl" />
+        <Skeleton className="h-64 w-full rounded-3xl" />
+      </div>
+      <Skeleton className="mt-6 h-40 w-full rounded-3xl" />
+    </div>
+  )
+}
+
 function BahiKhataSkeleton() {
   return (
     <div className="mx-auto max-w-5xl px-5 sm:px-8 py-10 sm:py-14">
@@ -273,6 +286,7 @@ export default function RouteSkeleton() {
   const { pathname } = useLocation()
 
   if (pathname === '/') return <LandingSkeleton />
+  if (pathname === '/dashboard') return <DashboardSkeleton />
   if (pathname === '/results') return <ResultsSkeleton />
   if (pathname === '/partners') return <TableSkeleton />
   if (pathname === '/schemes' || pathname === '/compare') return <SchemeCompareSkeleton />
