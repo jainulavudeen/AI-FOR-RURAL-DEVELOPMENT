@@ -15,6 +15,7 @@ const STATUS_STYLES = {
   in_review: 'bg-primary-100 text-primary-700',
   resolved: 'bg-teal-600/10 text-teal-700',
   rejected: 'bg-red-100 text-red-700',
+  escalated: 'bg-orange-100 text-orange-700',
 }
 
 const STATUS_KEYS = {
@@ -23,6 +24,7 @@ const STATUS_KEYS = {
   in_review: 'officer.statusInReview',
   resolved: 'officer.statusResolved',
   rejected: 'officer.statusRejected',
+  escalated: 'officer.statusEscalated',
 }
 
 const STATUS_OPTIONS = ['pending', 'assigned', 'in_review', 'resolved', 'rejected']

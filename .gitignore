@@ -17,6 +17,7 @@ packages/*/dist
 # Env
 .env
 .env.*.local
+docker-compose.override.yml
 
 # Manually-downloaded government source data for the ingestion pipeline —
 # not ours to redistribute, and too large/volatile for version control.
