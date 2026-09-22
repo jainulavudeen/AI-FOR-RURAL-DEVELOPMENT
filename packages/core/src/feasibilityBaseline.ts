@@ -11,6 +11,11 @@ export const BASE_SCORE: Record<string, number> = {
   textiles: 71,
   poultry: 74,
   manufacturing: 61,
+  mobile_electronics: 70,
+  food_processing: 68,
+  beauty_salon: 65,
+  agri_inputs: 72,
+  transport_services: 63,
 }
 
 export const DEFAULT_BASE_SCORE = 65

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, MapPin, IndianRupee, ArrowRight, ArrowLeft } from 'lucide-react'
@@ -6,6 +6,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useAppData } from '../context/AppDataContext'
 import { LOCATIONS, STATE_IDS } from '../data/locations'
 import { BUSINESS_TYPES } from '../data/businesses'
+import { getBusinessTypes } from '../lib/businessTypes'
 import { SOCIAL_CATEGORIES } from '@setu/core'
 import { formatIndianNumber } from '../lib/format'
 import { matchSpokenOption } from '../lib/voiceMatch'
@@ -33,6 +34,28 @@ export default function Wizard() {
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState(1)
   const [compareMode, setCompareMode] = useState(false)
+
+  // Renders from the static catalogue instantly (zero network, works
+  // offline) — the DB-backed GET /business-types is a non-blocking
+  // enrichment pass on top, same "renders now, enriches later if it
+  // resolves" shape as lib/feasibility.js's applyDemandSignal. A brand-new
+  // business type added only to the DB (no app redeploy) will appear here
+  // once the fetch resolves; a fully offline device just never sees it.
+  const [businessTypes, setBusinessTypes] = useState(BUSINESS_TYPES)
+  useEffect(() => {
+    let cancelled = false
+    getBusinessTypes().then((result) => {
+      if (cancelled || !result.ok || result.data.length === 0) return
+      const knownIds = new Set(BUSINESS_TYPES.map((b) => b.id))
+      const extra = result.data
+        .filter((b) => !knownIds.has(b.id))
+        .map((b) => ({ id: b.id, icon: b.icon, labelKey: b.nameKey, descKey: b.descKey }))
+      if (extra.length > 0) setBusinessTypes([...BUSINESS_TYPES, ...extra])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const districts = useMemo(
     () => (selection.stateId ? LOCATIONS[selection.stateId]?.districts ?? [] : []),
@@ -103,7 +126,7 @@ export default function Wizard() {
   }
 
   const handleBusinessVoiceResult = (transcript) => {
-    const match = matchSpokenOption(transcript, BUSINESS_TYPES, (b) => t(b.labelKey))
+    const match = matchSpokenOption(transcript, businessTypes, (b) => t(b.labelKey))
     if (!match) return
     if (compareMode) toggleCompareBusinessId(match.id)
     else updateSelection({ businessId: match.id })
@@ -227,7 +250,7 @@ export default function Wizard() {
                 )}
 
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {BUSINESS_TYPES.map((b) => {
+                  {businessTypes.map((b) => {
                     const selected = compareMode ? compareBusinessIds.includes(b.id) : selection.businessId === b.id
                     return (
                       <motion.button

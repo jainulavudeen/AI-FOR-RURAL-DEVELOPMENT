@@ -1,9 +1,9 @@
 import '../config/loadEnv'
 import { isNull } from 'drizzle-orm'
-import { buildEmiSchedule, classifyVerdict, MARGIN_PERCENT, SCHEMES, structureFinance } from '@setu/core'
+import { BASE_SCORE, buildEmiSchedule, classifyVerdict, MARGIN_PERCENT, SCHEMES, structureFinance } from '@setu/core'
 import type { Db } from './client'
 import { db } from './client'
-import { applicants, appeals, blocks, districts, informalLendingRates, reports, schemeRules } from './schema'
+import { applicants, appeals, blocks, businessTypes, districts, informalLendingRates, reports, schemeRules } from './schema'
 import { K_ANONYMITY_THRESHOLD } from '../modules/feasibility/peerBenchmark'
 
 // Fixed demo phone number — sign in via the normal OTP flow (console
@@ -222,6 +222,31 @@ export async function seedDemoData(db: Db) {
   // NULL under a unique index, so onConflictDoNothing can't dedupe it) —
   // check-then-insert instead, so re-running seed.ts doesn't pile up
   // duplicate fallback rows.
+  // The DB-backed business-type catalogue — apps/web/src/data/businesses.js
+  // stays the static default the offline Wizard renders from instantly;
+  // this table is what lib/businessTypes.js's non-blocking overlay fetch
+  // enriches from once/if it resolves. Icon/nameKey/descKey are kept in
+  // sync with data/businesses.js by hand (same bounded-duplication
+  // posture DEMO_PROFILES above already has for businessId strings);
+  // baseScore comes straight from @setu/core's BASE_SCORE so the number
+  // itself is never re-typed.
+  const BUSINESS_TYPE_CATALOGUE = [
+    { id: 'dairy', icon: 'Milk', nameKey: 'business.dairy.name', descKey: 'business.dairy.desc' },
+    { id: 'retail', icon: 'Store', nameKey: 'business.retail.name', descKey: 'business.retail.desc' },
+    { id: 'textiles', icon: 'Shirt', nameKey: 'business.textiles.name', descKey: 'business.textiles.desc' },
+    { id: 'poultry', icon: 'Bird', nameKey: 'business.poultry.name', descKey: 'business.poultry.desc' },
+    { id: 'manufacturing', icon: 'Factory', nameKey: 'business.manufacturing.name', descKey: 'business.manufacturing.desc' },
+    { id: 'mobile_electronics', icon: 'Smartphone', nameKey: 'business.mobile_electronics.name', descKey: 'business.mobile_electronics.desc' },
+    { id: 'food_processing', icon: 'Soup', nameKey: 'business.food_processing.name', descKey: 'business.food_processing.desc' },
+    { id: 'beauty_salon', icon: 'Scissors', nameKey: 'business.beauty_salon.name', descKey: 'business.beauty_salon.desc' },
+    { id: 'agri_inputs', icon: 'Sprout', nameKey: 'business.agri_inputs.name', descKey: 'business.agri_inputs.desc' },
+    { id: 'transport_services', icon: 'Truck', nameKey: 'business.transport_services.name', descKey: 'business.transport_services.desc' },
+  ]
+  await db
+    .insert(businessTypes)
+    .values(BUSINESS_TYPE_CATALOGUE.map((b) => ({ ...b, baseScore: BASE_SCORE[b.id] ?? 60 })))
+    .onConflictDoNothing({ target: businessTypes.id })
+
   const [existingFallback] = await db.select().from(informalLendingRates).where(isNull(informalLendingRates.districtId)).limit(1)
   if (!existingFallback) {
     await db.insert(informalLendingRates).values({
@@ -237,7 +262,7 @@ export async function seedDemoData(db: Db) {
   }
 
   console.log(
-    `Seeded Madurai pilot district (3 blocks) + scheme_rules v1 (micro_finance, term_loan) + demo officer (${DEMO_OFFICER_PHONE}) + informal-lending-rate regional fallback + ${K_ANONYMITY_THRESHOLD + 1} synthetic peer-benchmark reports + ${DEMO_PROFILES.length} demo applicant profiles (dairy/retail/textiles/poultry/manufacturing, both schemes, all four score bands)`
+    `Seeded Madurai pilot district (3 blocks) + scheme_rules v1 (micro_finance, term_loan) + ${BUSINESS_TYPE_CATALOGUE.length} business types + demo officer (${DEMO_OFFICER_PHONE}) + informal-lending-rate regional fallback + ${K_ANONYMITY_THRESHOLD + 1} synthetic peer-benchmark reports + ${DEMO_PROFILES.length} demo applicant profiles (dairy/retail/textiles/poultry/manufacturing, both schemes, all four score bands)`
   )
 }
 

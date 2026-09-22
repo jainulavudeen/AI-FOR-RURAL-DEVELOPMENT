@@ -47,8 +47,12 @@ describe('handleInput state machine', () => {
   })
 
   it('reprompts on an out-of-range business choice without losing session state', () => {
+    // '99' rather than a small fixed number — the menu is built from
+    // Object.keys(BASE_SCORE) (see sessionMachine.ts), so its length grows
+    // as @setu/core's business catalogue grows; this only needs to stay
+    // out of range, not track that count.
     const before = initialSession()
-    const result = handleInput(before, '9')
+    const result = handleInput(before, '99')
     expect(result.session).toEqual(before)
     expect(result.screen).toContain('Invalid choice')
     expect(result.continueSession).toBe(true)

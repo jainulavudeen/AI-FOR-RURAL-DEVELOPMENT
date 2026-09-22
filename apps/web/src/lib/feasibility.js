@@ -22,6 +22,11 @@ const SOURCE_KEYS = {
   textiles: ['source.udyam', 'source.labour', 'source.mandi', 'source.census'],
   poultry: ['source.mandi', 'source.udyam', 'source.mandi', 'source.animalHusbandry'],
   manufacturing: ['source.udyam', 'source.electricity', 'source.industries', 'source.udyam'],
+  mobile_electronics: ['source.udyam', 'source.marketSurvey', 'source.industries', 'source.logistics'],
+  food_processing: ['source.udyam', 'source.mandi', 'source.marketSurvey', 'source.electricity'],
+  beauty_salon: ['source.udyam', 'source.marketSurvey', 'source.labour', 'source.logistics'],
+  agri_inputs: ['source.udyam', 'source.mandi', 'source.cooperative', 'source.logistics'],
+  transport_services: ['source.logistics', 'source.electricity', 'source.marketSurvey', 'source.industries'],
 }
 
 const ICONS = {
@@ -30,6 +35,11 @@ const ICONS = {
   textiles: ['Building2', 'Wallet', 'LineChart', 'Users'],
   poultry: ['Bird', 'Building2', 'Wheat', 'MapPin'],
   manufacturing: ['Factory', 'Zap', 'MapPin', 'TrendingUp'],
+  mobile_electronics: ['Smartphone', 'Building2', 'TrendingUp', 'MapPin'],
+  food_processing: ['Soup', 'Wheat', 'TrendingUp', 'MapPin'],
+  beauty_salon: ['Scissors', 'Users', 'TrendingUp', 'MapPin'],
+  agri_inputs: ['Sprout', 'Wheat', 'Building2', 'MapPin'],
+  transport_services: ['Truck', 'Zap', 'TrendingUp', 'MapPin'],
 }
 
 // Value ranges per business, per insight index: [min, max, decimals]
@@ -39,6 +49,11 @@ const VALUE_RANGES = {
   textiles: [[60, 210, 0], [320, 480, 0], [-3, 6, 1], [8, 24, 0]],
   poultry: [[85, 140, 0], [40, 180, 0], [-4, 7, 1], [4, 16, 0]],
   manufacturing: [[50, 190, 0], [5.5, 8.5, 1], [3, 20, 0], [3, 11, 0]],
+  mobile_electronics: [[15, 60, 0], [500, 2500, 0], [3, 12, 1], [4, 20, 0]],
+  food_processing: [[10, 45, 0], [40, 180, 0], [3, 15, 1], [5, 25, 0]],
+  beauty_salon: [[5, 30, 0], [300, 1800, 0], [4, 18, 1], [3, 15, 0]],
+  agri_inputs: [[8, 35, 0], [400, 2200, 0], [5, 20, 1], [4, 22, 0]],
+  transport_services: [[10, 50, 0], [8, 25, 1], [4, 16, 1], [3, 18, 0]],
 }
 
 // Block-level financial-inclusion insights, shared across all business types.
