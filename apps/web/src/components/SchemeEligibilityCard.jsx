@@ -9,7 +9,7 @@ import Icon from './Icon'
 // short bulleted reasons, no jargon-heavy prose. See CLAUDE.md's target
 // user: a first-time smartphone user on a small screen who may not read
 // English fluently.
-export default function SchemeEligibilityCard({ item, facts, reference, personalized, expanded, onToggle }) {
+export default function SchemeEligibilityCard({ item, facts, reference, documents, matchScore, personalized, expanded, onToggle }) {
   const { t } = useI18n()
   const eligible = item.eligible
   // National schemes whose real eligibility gate isn't a project-cost band
@@ -53,7 +53,7 @@ export default function SchemeEligibilityCard({ item, facts, reference, personal
                   }`}
                 >
                   {eligible ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                  {eligible ? t('eligibility.badgeMatch') : t('eligibility.badgeNoMatch')}
+                  {eligible && matchScore != null ? t('eligibility.matchScoreLabel', { score: matchScore }) : eligible ? t('eligibility.badgeMatch') : t('eligibility.badgeNoMatch')}
                 </span>
               ))}
           </div>
@@ -103,11 +103,41 @@ export default function SchemeEligibilityCard({ item, facts, reference, personal
             </p>
           )}
 
-          {reference?.howToApplyKey && (
+          {documents?.length > 0 && (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ink-900/40 mb-1.5">{t('eligibility.requiredDocumentsTitle')}</p>
+              <ul className="space-y-1">
+                {documents.map((docKey) => (
+                  <li key={docKey} className="text-[12.5px] text-ink-900/70 leading-snug flex items-start gap-1.5">
+                    <span className="mt-1.5 h-1 w-1 rounded-full bg-primary-400 shrink-0" />
+                    {t(docKey)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {reference?.applyStepKeys?.length > 0 ? (
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-ink-900/40 mb-1">{t('eligibility.howToApplyTitle')}</p>
-              <p className="text-[12.5px] text-ink-900/70 leading-snug">{t(reference.howToApplyKey)}</p>
+              <ol className="space-y-1">
+                {reference.applyStepKeys.map((stepKey, idx) => (
+                  <li key={stepKey} className="text-[12.5px] text-ink-900/70 leading-snug flex items-start gap-1.5">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[9.5px] font-bold text-primary-700">
+                      {idx + 1}
+                    </span>
+                    {t(stepKey)}
+                  </li>
+                ))}
+              </ol>
             </div>
+          ) : (
+            reference?.howToApplyKey && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-ink-900/40 mb-1">{t('eligibility.howToApplyTitle')}</p>
+                <p className="text-[12.5px] text-ink-900/70 leading-snug">{t(reference.howToApplyKey)}</p>
+              </div>
+            )
           )}
 
           {reference?.sourceUrl && (

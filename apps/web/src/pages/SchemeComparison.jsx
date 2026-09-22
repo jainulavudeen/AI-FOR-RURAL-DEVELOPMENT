@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Landmark, ArrowRight, Pencil } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAppData } from '../context/AppDataContext'
-import { getEligibleSchemes, SCHEME_REFERENCES, structureFinance } from '@setu/core'
+import { getEligibleSchemes, SCHEME_REFERENCES, structureFinance, computeMatchScore, getRequiredDocuments } from '@setu/core'
 import { formatINR } from '../lib/format'
 import SchemeEligibilityCard from '../components/SchemeEligibilityCard'
 
@@ -37,7 +37,12 @@ export default function SchemeComparison() {
     [finance.projectCost, selection.categoryId, selection.isWomanOwned, selection.stateId]
   )
 
-  const matched = schemes.filter((s) => s.eligible)
+  // Ranked highest-match-first — computeMatchScore never disagrees with
+  // `eligible` itself (see schemeMatchScore.ts), it only orders within the
+  // eligible set.
+  const matched = schemes
+    .filter((s) => s.eligible)
+    .sort((a, b) => computeMatchScore(b, finance.projectCost) - computeMatchScore(a, finance.projectCost))
   const visible = personalized && tab === 'matched' ? matched : schemes
 
   return (
@@ -110,6 +115,8 @@ export default function SchemeComparison() {
               item={item}
               facts={buildFacts(item, t)}
               reference={SCHEME_REFERENCES[item.id]}
+              documents={getRequiredDocuments(item.id)}
+              matchScore={personalized && item.eligible ? computeMatchScore(item, finance.projectCost) : null}
               personalized={personalized}
               expanded={expandedId === item.id}
               onToggle={() => setExpandedId((prev) => (prev === item.id ? null : item.id))}

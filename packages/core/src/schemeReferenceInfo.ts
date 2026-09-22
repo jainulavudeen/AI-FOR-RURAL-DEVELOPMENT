@@ -28,6 +28,13 @@ export interface SchemeReference {
   // "loan cap" specifically, since the source isn't always that precise.
   maxAmount: number | null
   howToApplyKey: string
+  // An ordered, numbered breakdown of howToApplyKey's single prose
+  // sentence, where the source is clear enough about the actual process
+  // stages to structure it honestly (portal → verifying body → sanctioning
+  // bank, for example). Deliberately not populated for every scheme — see
+  // this file's header — the UI falls back to the howToApplyKey prose when
+  // absent rather than inventing steps a source didn't actually spell out.
+  applyStepKeys?: string[]
   sourceUrl: string
   vintageLabel: string
   // 'mirror' = official site unreachable, sourced via a state agency's
@@ -94,6 +101,11 @@ export const SCHEME_REFERENCES: Record<string, SchemeReference> = {
     annualIncomeCeiling: null,
     maxAmount: 625000,
     howToApplyKey: 'stateScheme.up_odop_margin_money.howToApply',
+    applyStepKeys: [
+      'stateScheme.up_odop_margin_money.applyStep1',
+      'stateScheme.up_odop_margin_money.applyStep2',
+      'stateScheme.up_odop_margin_money.applyStep3',
+    ],
     sourceUrl: 'https://msme1connect.up.gov.in/scheme-list/financial-assistance-scheme-for-one-district-one-product-(odop-margin-money-scheme)',
     vintageLabel: 'as of 20 September 2026',
     sourceCaveat: null,
@@ -179,6 +191,7 @@ export const SCHEME_REFERENCES: Record<string, SchemeReference> = {
     annualIncomeCeiling: null,
     maxAmount: null,
     howToApplyKey: 'nationalScheme.pmegp.howToApply',
+    applyStepKeys: ['nationalScheme.pmegp.applyStep1', 'nationalScheme.pmegp.applyStep2', 'nationalScheme.pmegp.applyStep3'],
     sourceUrl: 'https://www.msme.gov.in/1-prime-ministers-employment-generation-programme-pmegp',
     vintageLabel: 'as of 20 September 2026',
     sourceCaveat: 'secondary',
@@ -188,6 +201,7 @@ export const SCHEME_REFERENCES: Record<string, SchemeReference> = {
     annualIncomeCeiling: null,
     maxAmount: null,
     howToApplyKey: 'nationalScheme.pm_mudra.howToApply',
+    applyStepKeys: ['nationalScheme.pm_mudra.applyStep1', 'nationalScheme.pm_mudra.applyStep2'],
     sourceUrl: 'https://www.jansamarth.in/business-loan-pradhan-mantri-mudra-yojana-scheme',
     vintageLabel: 'as of 2026 (Tarun Plus tier reflects the 2023 Union Budget expansion)',
     sourceCaveat: 'secondary',
@@ -197,6 +211,7 @@ export const SCHEME_REFERENCES: Record<string, SchemeReference> = {
     annualIncomeCeiling: null,
     maxAmount: 50000,
     howToApplyKey: 'nationalScheme.pm_svanidhi.howToApply',
+    applyStepKeys: ['nationalScheme.pm_svanidhi.applyStep1', 'nationalScheme.pm_svanidhi.applyStep2'],
     sourceUrl: 'https://pmsvanidhi.mohua.gov.in/',
     vintageLabel: 'as of 20 September 2026',
     sourceCaveat: 'secondary',
@@ -206,6 +221,7 @@ export const SCHEME_REFERENCES: Record<string, SchemeReference> = {
     annualIncomeCeiling: null,
     maxAmount: 1000000,
     howToApplyKey: 'nationalScheme.day_nrlm_shg.howToApply',
+    applyStepKeys: ['nationalScheme.day_nrlm_shg.applyStep1', 'nationalScheme.day_nrlm_shg.applyStep2'],
     sourceUrl: 'https://bankofmaharashtra.bank.in/financing-to-self-help-groups',
     vintageLabel: 'as of 20 September 2026',
     sourceCaveat: 'secondary',
