@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, ArrowRight } from 'lucide-react'
 import { computeCreditScore, getUpcomingFestivals, summarizeLedger } from '@setu/core'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { getTransactions } from '../lib/ledger'
-import { generateFeasibility } from '../lib/feasibility'
+import { generateFeasibility, getBestAlternativeBusiness } from '../lib/feasibility'
+import { BUSINESS_TYPES } from '../data/businesses'
 import RadialGauge from '../components/RadialGauge'
 import DailyBulletinBanner from '../components/DailyBulletinBanner'
 import FestivalDemandCard from '../components/FestivalDemandCard'
 import CashFlowSnapshotCard from '../components/CashFlowSnapshotCard'
 import PeerBenchmarkCard from '../components/PeerBenchmarkCard'
+import AlternativeBusinessCard from '../components/AlternativeBusinessCard'
 import LogSaleModal from '../components/LogSaleModal'
 
 // "Your shop at a glance" — the V2 home base a returning applicant lands
@@ -24,7 +26,8 @@ import LogSaleModal from '../components/LogSaleModal'
 export default function Dashboard() {
   const { t } = useI18n()
   const { isAuthenticated, requestLogin, phone } = useAuth()
-  const { selection } = useAppData()
+  const { selection, updateSelection, startComparison } = useAppData()
+  const navigate = useNavigate()
   const [transactions, setTransactions] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -59,6 +62,25 @@ export default function Dashboard() {
         : null,
     [hasLocationAndBusiness, selection.businessId, selection.stateId, selection.districtId, selection.blockId]
   )
+
+  // Same suggestion Results.jsx already surfaces after generating a
+  // report — reused verbatim here (identical getBestAlternativeBusiness()
+  // call + AlternativeBusinessCard component) rather than recomputed, so
+  // Dashboard can never disagree with Results about which business is
+  // actually the better bet at this location.
+  const alternative = useMemo(
+    () =>
+      hasLocationAndBusiness
+        ? getBestAlternativeBusiness({
+            businessId: selection.businessId,
+            stateId: selection.stateId,
+            districtId: selection.districtId,
+            blockId: selection.blockId,
+          })
+        : null,
+    [hasLocationAndBusiness, selection.businessId, selection.stateId, selection.districtId, selection.blockId]
+  )
+  const currentBusiness = useMemo(() => BUSINESS_TYPES.find((b) => b.id === selection.businessId) ?? null, [selection.businessId])
 
   if (!isAuthenticated) {
     return (
@@ -113,6 +135,20 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {alternative && currentBusiness && (
+        <AlternativeBusinessCard
+          business={currentBusiness}
+          currentScore={alternative.currentScore}
+          alternative={alternative.business}
+          altScore={alternative.feasibility.score}
+          onViewAlternative={() => updateSelection({ businessId: alternative.business.id })}
+          onCompareBoth={() => {
+            startComparison([selection.businessId, alternative.business.id])
+            navigate('/compare')
+          }}
+        />
+      )}
 
       <div className="mt-6">
         <CashFlowSnapshotCard summary={summary} />
