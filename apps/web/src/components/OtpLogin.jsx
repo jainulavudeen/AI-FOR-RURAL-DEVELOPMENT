@@ -24,6 +24,7 @@ export default function OtpLogin() {
   const [codeInput, setCodeInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [deliveryMode, setDeliveryMode] = useState(null)
 
   const reset = () => {
     setStep('phone')
@@ -31,6 +32,7 @@ export default function OtpLogin() {
     setCodeInput('')
     setError('')
     setLoading(false)
+    setDeliveryMode(null)
   }
 
   const close = () => {
@@ -51,6 +53,7 @@ export default function OtpLogin() {
     setLoading(false)
 
     if (result.ok) {
+      setDeliveryMode(result.data?.deliveryMode ?? null)
       setStep('code')
       return
     }
@@ -166,6 +169,11 @@ export default function OtpLogin() {
             {step === 'code' && (
               <form onSubmit={handleVerify}>
                 <label className="mb-2 block text-xs font-medium text-primary-900">{t('auth.codeLabel')}</label>
+                {deliveryMode === 'console' && (
+                  <p className="mb-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] leading-snug text-amber-800">
+                    {t('auth.consoleModeNotice')}
+                  </p>
+                )}
                 <input
                   type="text"
                   inputMode="numeric"

@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
+import { env } from '../../config/env'
 import { applicants } from '../../db/schema'
 import { logout, refreshSession, requestOtp, verifyOtp, type Applicant, type AuthDeps } from './service'
 import { createSmsProvider } from './smsProvider'
@@ -8,6 +9,12 @@ import type { LogoutBody, OtpRequestBody, OtpVerifyBody, RefreshBody } from './t
 function rowToApplicant(row: { id: string; phone: string; role: string }): Applicant {
   return { id: row.id, phone: row.phone, role: row.role }
 }
+
+// Loose E.164 check — just enough to reject obviously malformed input (typos,
+// missing country code, non-numeric junk) before it reaches the SMS provider.
+// Not a full national-format validator; the frontend already enforces the
+// stricter +91-and-10-digits shape for this app's actual users.
+const PHONE_FORMAT = /^\+[1-9]\d{7,14}$/
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   const smsProvider = createSmsProvider()
@@ -37,6 +44,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     if (!phone) {
       return reply.status(400).send({ error: { message: 'phone is required', code: 'BAD_REQUEST' } })
     }
+    if (!PHONE_FORMAT.test(phone)) {
+      return reply.status(400).send({ error: { message: 'phone is not a valid number', code: 'INVALID_PHONE' } })
+    }
 
     const result = await requestOtp(deps, phone, request.ip)
     if (!result.ok) {
@@ -45,7 +55,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         error: { message: result.reason, code: result.reason.toUpperCase(), retryAfterSeconds: result.retryAfterSeconds },
       })
     }
-    return reply.status(202).send({ message: 'otp_sent', retryAfterSeconds: result.retryAfterSeconds })
+    // deliveryMode tells the client which SMS path actually ran — the
+    // default 'console' provider only logs the code server-side and never
+    // reaches a real phone, which otherwise looks identical to a real send
+    // from this response alone (see CLAUDE.md boundary rule 4: degrade
+    // honestly, don't let a demo default masquerade as success).
+    return reply
+      .status(202)
+      .send({ message: 'otp_sent', retryAfterSeconds: result.retryAfterSeconds, deliveryMode: env.SMS_PROVIDER })
   })
 
   fastify.post<{ Body: OtpVerifyBody }>('/otp/verify', async (request, reply) => {
