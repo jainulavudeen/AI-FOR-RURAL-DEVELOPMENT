@@ -7,8 +7,8 @@ import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { LOCATIONS } from '../data/locations'
 import { BUSINESS_TYPES } from '../data/businesses'
-import { getMatchingSocialSchemes, structureFinance, buildEmiSchedule } from '@setu/core'
-import { generateFeasibility, applyDemandSignal, applyRealFactors } from '../lib/feasibility'
+import { getEligibleSchemes, structureFinance, buildEmiSchedule } from '@setu/core'
+import { generateFeasibility, applyDemandSignal, applyRealFactors, getBestAlternativeBusiness } from '../lib/feasibility'
 import {
   FALLBACK_INFORMAL_RATE,
   FALLBACK_DEMAND_SIGNAL,
@@ -25,12 +25,13 @@ import MarginLoanDonut from '../components/MarginLoanDonut'
 import StatTile from '../components/StatTile'
 import EmiScheduleTable from '../components/EmiScheduleTable'
 import ScoreBreakdown from '../components/ScoreBreakdown'
-import SocialSchemesPanel from '../components/SocialSchemesPanel'
+import SchemeEligibilityTeaser from '../components/SchemeEligibilityTeaser'
 import AppealPanel from '../components/AppealPanel'
 import CostOfInactionCard from '../components/CostOfInactionCard'
 import AccountAggregatorOptIn from '../components/AccountAggregatorOptIn'
 import MicroLesson from '../components/MicroLesson'
 import PeerBenchmarkCard from '../components/PeerBenchmarkCard'
+import AlternativeBusinessCard from '../components/AlternativeBusinessCard'
 import SiteCaptureCard from '../components/SiteCaptureCard'
 import MarketplaceNudge from '../components/MarketplaceNudge'
 import ReportNarration from '../components/ReportNarration'
@@ -43,7 +44,7 @@ const SIM_STEP_MARGIN = 1000
 export default function Results() {
   const { t, language } = useI18n()
   const { isAuthenticated } = useAuth()
-  const { selection, hasReport, resetSelection, updateSelection } = useAppData()
+  const { selection, hasReport, resetSelection, updateSelection, startComparison } = useAppData()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -77,9 +78,31 @@ export default function Results() {
     [selection.businessId, selection.stateId, selection.districtId, selection.blockId]
   )
 
-  const socialSchemes = useMemo(
-    () => getMatchingSocialSchemes(selection.categoryId, selection.isWomanOwned),
-    [selection.categoryId, selection.isWomanOwned]
+  // Computed off the same seeded baseline as baseFeasibility, deliberately
+  // not the demand/infra-overlaid `feasibility` below — the suggestion
+  // should reflect a stable, comparable score across business types, the
+  // same basis Compare.jsx uses, not one business's live overlay racing
+  // against four others' un-overlaid seeded scores.
+  const alternative = useMemo(
+    () =>
+      getBestAlternativeBusiness({
+        businessId: selection.businessId,
+        stateId: selection.stateId,
+        districtId: selection.districtId,
+        blockId: selection.blockId,
+      }),
+    [selection.businessId, selection.stateId, selection.districtId, selection.blockId]
+  )
+
+  const eligibleSchemes = useMemo(
+    () =>
+      getEligibleSchemes({
+        projectCost: finance.projectCost,
+        categoryId: selection.categoryId,
+        isWomanOwned: selection.isWomanOwned,
+        stateId: selection.stateId,
+      }),
+    [finance.projectCost, selection.categoryId, selection.isWomanOwned, selection.stateId]
   )
   const [informalRate, setInformalRate] = useState(FALLBACK_INFORMAL_RATE)
   useEffect(() => {
@@ -181,6 +204,9 @@ export default function Results() {
               state: t(stateLabelKey),
             })}
           </p>
+          {selection.digipin && (
+            <p className="mt-1 text-[11px] font-medium text-teal-700">{t('wizard.digipinPinned', { digipin: selection.digipin })}</p>
+          )}
         </div>
         <div className="flex flex-wrap gap-3">
           <ReportNarration
@@ -239,6 +265,20 @@ export default function Results() {
           <div className="mt-8">
             <ScoreBreakdown factors={feasibility.factors} />
           </div>
+
+          {alternative && (
+            <AlternativeBusinessCard
+              business={business}
+              currentScore={alternative.currentScore}
+              alternative={alternative.business}
+              altScore={alternative.feasibility.score}
+              onViewAlternative={() => updateSelection({ businessId: alternative.business.id })}
+              onCompareBoth={() => {
+                startComparison([selection.businessId, alternative.business.id])
+                navigate('/compare')
+              }}
+            />
+          )}
 
           <h3 className="mt-8 mb-3 text-sm font-bold text-primary-900">{t('results.insightsTitle')}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -383,7 +423,10 @@ export default function Results() {
           <EmiScheduleTable rows={schedule.rows} />
 
           <div className="mt-6 pt-6 border-t border-primary-100">
-            <SocialSchemesPanel schemes={socialSchemes} />
+            <SchemeEligibilityTeaser
+              matchedCount={eligibleSchemes.filter((s) => s.eligible).length}
+              totalCount={eligibleSchemes.length}
+            />
           </div>
         </motion.section>
       </div>
