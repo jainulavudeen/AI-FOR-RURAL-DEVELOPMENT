@@ -2,7 +2,7 @@ import RedisMock from 'ioredis-mock'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LlmProvider, LlmTier } from '../../llm/client'
 import type { EmbeddingProvider } from '../../llm/embeddingProvider'
-import { narrateReport, query } from './service'
+import { narrateReport, query, queryWithClaims } from './service'
 import type { NarrationInput, QueryRequestBody } from './types'
 
 function makeLlmProvider(fn: LlmProvider['generate']): LlmProvider {
@@ -191,5 +191,74 @@ describe('query — deterministic tier escalation', () => {
 
     expect(result.narrationSource).toBe('template')
     expect(result.answer.length).toBeGreaterThan(0)
+  })
+})
+
+describe('queryWithClaims — the advisorSaathi seam', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const callerClaims = [
+    {
+      text: 'Your ledger shows ₹52,000 average monthly sales over the last 90 days.',
+      sourceId: 'ledger',
+      section: 'cashflow',
+      sourceUrl: '',
+      dataVintage: '2026-09',
+      similarity: 1,
+    },
+  ]
+
+  it('never touches retrieval/the db — trusts the caller-supplied claims entirely', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const generate = vi.fn(async () => 'Your average monthly sales are ₹52,000.')
+    const llmProvider = makeLlmProvider(generate)
+
+    // db is deliberately `undefined` here — if queryWithClaims ever called
+    // retrieveGroundedClaims internally (the way query() does), this would
+    // throw immediately rather than silently succeed.
+    const result = await queryWithClaims(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { db: undefined as any, redis, llmProvider },
+      { question: 'What are my average sales?', claims: callerClaims, numbers: { avgMonthlySales: 52000 }, locale: 'en' }
+    )
+
+    expect(result.narrationSource).toBe('llm')
+    expect(result.claims).toBe(callerClaims)
+  })
+
+  it('never caches — two calls with identical input both hit the LLM', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const generate = vi.fn(async () => 'Your average monthly sales are ₹52,000.')
+    const llmProvider = makeLlmProvider(generate)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deps = { db: undefined as any, redis, llmProvider }
+    const input = { question: 'What are my average sales?', claims: callerClaims, numbers: { avgMonthlySales: 52000 }, locale: 'en' as const }
+
+    await queryWithClaims(deps, input)
+    await queryWithClaims(deps, input)
+
+    expect(generate).toHaveBeenCalledTimes(2)
+    const cachedKeys = await redis.keys('grounding:*')
+    expect(cachedKeys).toHaveLength(0)
+  })
+
+  it('rejects an answer that invents a number outside the caller-supplied numbers map', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const llmProvider = makeLlmProvider(async () => 'Your average monthly sales are ₹99,000.')
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await queryWithClaims(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { db: undefined as any, redis, llmProvider },
+      { question: 'What are my average sales?', claims: callerClaims, numbers: { avgMonthlySales: 52000 }, locale: 'en' }
+    )
+
+    expect(result.narrationSource).toBe('template')
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('rejected'), expect.objectContaining({ invalid: [99000] }))
   })
 })

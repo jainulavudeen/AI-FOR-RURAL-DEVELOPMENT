@@ -81,3 +81,5 @@ export {
 } from './loanSanctionProbability'
 
 export { FESTIVAL_CALENDAR, getUpcomingFestivals, type FestivalEvent, type UpcomingFestival } from './festivalCalendar'
+
+export { SCHEME_ENGLISH_LABELS, schemeEnglishLabel } from './schemeEnglishLabels'

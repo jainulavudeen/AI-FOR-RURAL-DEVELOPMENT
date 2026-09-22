@@ -21,6 +21,7 @@ const Wizard = lazy(() => import('./pages/Wizard'))
 const BahiKhata = lazy(() => import('./pages/BahiKhata'))
 const CreditScore = lazy(() => import('./pages/CreditScore'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const AdvisorSaathi = lazy(() => import('./pages/AdvisorSaathi'))
 const Results = lazy(() => import('./pages/Results'))
 const Compare = lazy(() => import('./pages/Compare'))
 const SchemeComparison = lazy(() => import('./pages/SchemeComparison'))
@@ -37,6 +38,7 @@ function AnimatedRoutes() {
         <Route path="/eligibility" element={<PageTransition><Wizard /></PageTransition>} />
         <Route path="/bahi-khata" element={<PageTransition><BahiKhata /></PageTransition>} />
         <Route path="/credit-score" element={<PageTransition><CreditScore /></PageTransition>} />
+        <Route path="/advisor-saathi" element={<PageTransition><AdvisorSaathi /></PageTransition>} />
         <Route path="/results" element={<PageTransition><Results /></PageTransition>} />
         <Route path="/compare" element={<PageTransition><Compare /></PageTransition>} />
         <Route path="/schemes" element={<PageTransition><SchemeComparison /></PageTransition>} />

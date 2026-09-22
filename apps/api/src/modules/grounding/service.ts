@@ -11,7 +11,7 @@ import { createEmbeddingProvider, type EmbeddingProvider } from '../../llm/embed
 import { buildFallbackAnswer, buildFallbackNarration } from './fallbackTemplates'
 import { buildQueryPrompt, buildNarrationPrompt } from './promptBuilder'
 import { retrieveGroundedClaims } from './retrieval'
-import type { GroundedClaim, NarrationInput, NarrationResult, QueryRequestBody, QueryResult } from './types'
+import type { GroundedClaim, Locale, NarrationInput, NarrationResult, QueryRequestBody, QueryResult } from './types'
 import { buildAllowedNumbers, validateNarration } from './validator'
 
 const NARRATION_CACHE_TTL_SECONDS = 24 * 60 * 60 // fast tier — the common case, refreshed daily
@@ -84,25 +84,30 @@ export async function narrateReport(deps: GroundingDeps, input: NarrationInput):
   }
 }
 
-// Eligibility Q&A (backs POST /grounding/query). Retrieves cited claims,
-// escalates to the strong tier only for genuine ambiguity, and applies the
-// same validate-or-fall-back-to-template contract. A "what if" that needs a
-// new number is the caller's job to recompute via @setu/core and call this
-// again — this module never calls the calculator itself.
-export async function query(deps: GroundingDeps, body: QueryRequestBody): Promise<QueryResult> {
-  const embeddingProvider = deps.embeddingProvider ?? createEmbeddingProvider()
+// Shared by query() and queryWithClaims() below: tier decision, an
+// optional cache lookup/write (null cacheKey skips caching entirely —
+// queryWithClaims uses this for personal per-applicant data that
+// shouldn't sit under a cross-user cache key), prompt build, generate,
+// validate-or-fall-back-to-template. Neither caller duplicates this
+// try/catch/fallback contract.
+async function runQuery(
+  deps: GroundingDeps,
+  question: string,
+  claims: GroundedClaim[],
+  locale: Locale,
+  numbers: Record<string, number> | undefined,
+  cacheKey: string | null
+): Promise<QueryResult> {
   const llmProvider = deps.llmProvider ?? createLlmProvider()
-  const locale = body.context?.locale ?? 'en'
-
-  const claims = await retrieveGroundedClaims({ db: deps.db, embeddingProvider }, body.question, body.context)
   const tier = decideTier(claims)
-  const cacheKey = queryCacheKey(body, tier)
 
-  const cached = await deps.redis.get(cacheKey).catch(() => null)
-  if (cached) return { answer: cached, narrationSource: 'llm', tier, claims }
+  if (cacheKey) {
+    const cached = await deps.redis.get(cacheKey).catch(() => null)
+    if (cached) return { answer: cached, narrationSource: 'llm', tier, claims }
+  }
 
-  const allowedNumbers = buildAllowedNumbers(body.context?.numbers ?? {})
-  const { system, user } = buildQueryPrompt(body.question, claims, locale, body.context?.numbers)
+  const allowedNumbers = buildAllowedNumbers(numbers ?? {})
+  const { system, user } = buildQueryPrompt(question, claims, locale, numbers)
 
   try {
     const text = await withTimeout(llmProvider.generate(tier, system, user), env.LLM_TIMEOUT_MS)
@@ -111,8 +116,10 @@ export async function query(deps: GroundingDeps, body: QueryRequestBody): Promis
       console.warn('[grounding] query answer rejected — numbers not in structured input', { cacheKey, invalid: validation.invalid })
       return { answer: buildFallbackAnswer(locale, claims), narrationSource: 'template', tier, claims }
     }
-    const ttl = tier === 'strong' ? STRONG_CACHE_TTL_SECONDS : NARRATION_CACHE_TTL_SECONDS
-    await deps.redis.set(cacheKey, text, 'EX', ttl).catch(() => {})
+    if (cacheKey) {
+      const ttl = tier === 'strong' ? STRONG_CACHE_TTL_SECONDS : NARRATION_CACHE_TTL_SECONDS
+      await deps.redis.set(cacheKey, text, 'EX', ttl).catch(() => {})
+    }
     return { answer: text, narrationSource: 'llm', tier, claims }
   } catch (err) {
     console.warn('[grounding] query fell back to template', {
@@ -121,4 +128,37 @@ export async function query(deps: GroundingDeps, body: QueryRequestBody): Promis
     })
     return { answer: buildFallbackAnswer(locale, claims), narrationSource: 'template', tier, claims }
   }
+}
+
+// Eligibility Q&A (backs POST /grounding/query). Retrieves cited claims
+// itself, escalates to the strong tier only for genuine ambiguity, and
+// applies the validate-or-fall-back-to-template contract via runQuery. A
+// "what if" that needs a new number is the caller's job to recompute via
+// @setu/core and call this again — this module never calls the calculator
+// itself.
+export async function query(deps: GroundingDeps, body: QueryRequestBody): Promise<QueryResult> {
+  const embeddingProvider = deps.embeddingProvider ?? createEmbeddingProvider()
+  const locale = body.context?.locale ?? 'en'
+
+  const claims = await retrieveGroundedClaims({ db: deps.db, embeddingProvider }, body.question, body.context)
+  const cacheKey = queryCacheKey(body, decideTier(claims))
+
+  return runQuery(deps, body.question, claims, locale, body.context?.numbers, cacheKey)
+}
+
+export interface QueryWithClaimsInput {
+  question: string
+  // Caller-supplied, not retrieved — this is the seam a module like
+  // advisorSaathi uses to ground an answer in data retrieval.ts has no
+  // reason to know about (ledger/credit-score/scheme-match figures), while
+  // still going through the exact same validate-or-fall-back-to-template
+  // contract as query(). Never imports llm/client.ts itself — only this
+  // file does (CLAUDE.md boundary rule 2).
+  claims: GroundedClaim[]
+  numbers: Record<string, number>
+  locale: Locale
+}
+
+export async function queryWithClaims(deps: GroundingDeps, input: QueryWithClaimsInput): Promise<QueryResult> {
+  return runQuery(deps, input.question, input.claims, input.locale, input.numbers, null)
 }
