@@ -41,6 +41,7 @@ export default function Navbar() {
     { to: '/', key: 'nav.home', end: true },
     { to: '/eligibility', key: 'nav.checkEligibility' },
     { to: '/bahi-khata', key: 'nav.bahiKhata' },
+    { to: '/credit-score', key: 'nav.creditScore' },
     { to: '/schemes', key: 'nav.schemes' },
     { to: '/architecture', key: 'nav.architecture' },
     { to: '/partners', key: 'nav.partners' },

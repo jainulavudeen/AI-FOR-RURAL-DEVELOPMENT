@@ -118,6 +118,34 @@ function BahiKhataSkeleton() {
   )
 }
 
+function CreditScoreSkeleton() {
+  return (
+    <div className="mx-auto max-w-5xl px-5 sm:px-8 py-10 sm:py-14">
+      <div className="max-w-2xl mx-auto mb-10 space-y-3 text-center">
+        <Skeleton className="h-5 w-40 mx-auto rounded-full" />
+        <Skeleton className="h-8 w-3/4 mx-auto" />
+        <Skeleton className="h-4 w-full" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-3xl border border-primary-100 bg-white p-8 flex justify-center">
+          <Skeleton className="h-52 w-52 rounded-full" />
+        </div>
+        <div className="rounded-3xl border border-primary-100 bg-white p-8 space-y-3">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      </div>
+      <Skeleton className="mt-10 mb-4 h-5 w-56" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-28 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TableSkeleton() {
   return (
     <div className="mx-auto max-w-6xl px-5 sm:px-8 py-12 sm:py-16">
@@ -250,6 +278,7 @@ export default function RouteSkeleton() {
   if (pathname === '/schemes' || pathname === '/compare') return <SchemeCompareSkeleton />
   if (pathname === '/eligibility') return <FormSkeleton />
   if (pathname === '/bahi-khata') return <BahiKhataSkeleton />
+  if (pathname === '/credit-score') return <CreditScoreSkeleton />
   if (pathname === '/architecture') return <ArchitectureSkeleton />
   return <FormSkeleton />
 }

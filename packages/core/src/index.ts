@@ -58,3 +58,24 @@ export {
   type LedgerSummary,
   type MonthBucket,
 } from './ledgerSummary'
+
+export {
+  computeCreditScore,
+  simulateScoreDelta,
+  classifyCreditScoreVerdict,
+  SCORE_MIN as CREDIT_SCORE_MIN,
+  SCORE_MAX as CREDIT_SCORE_MAX,
+  PRIME_BANKABLE_THRESHOLD,
+  PILLAR_WEIGHTS,
+  type CreditScoreInput,
+  type CreditScoreResult,
+  type CreditScorePillar,
+  type CreditScorePillarId,
+  type CreditScoreVerdictKey,
+} from './creditScore'
+
+export {
+  getLoanSanctionProbabilities,
+  type LoanSanctionProbability,
+  type LoanSanctionProbabilityLabelKey,
+} from './loanSanctionProbability'

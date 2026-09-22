@@ -7,6 +7,7 @@ import redisPlugin from './plugins/redis'
 import accountAggregatorModule from './modules/accountAggregator'
 import authModule from './modules/auth'
 import calculatorModule from './modules/calculator'
+import creditScoreModule from './modules/creditScore'
 import feasibilityModule from './modules/feasibility'
 import feedbackModule from './modules/feedback'
 import groundingModule from './modules/grounding'
@@ -17,12 +18,13 @@ import siteCaptureModule from './modules/siteCapture'
 import ussdModule from './modules/ussd'
 
 // One deployable unit — six original modules plus accountAggregator,
-// siteCapture, ussd and now ledger, deliberate exceptions (see CLAUDE.md:
-// consented external data acquisition, geotagged evidence capture, a
-// non-smartphone access rail, and now a daily-use transaction ledger, none
-// of which semantically belong inside any of the original six). Still a
-// modular monolith, not microservices — inter-module calls are plain
-// function calls with no network hop.
+// siteCapture, ussd, ledger and now creditScore, deliberate exceptions (see
+// CLAUDE.md: consented external data acquisition, geotagged evidence
+// capture, a non-smartphone access rail, a daily-use transaction ledger,
+// and now an explainable alternative-credit score, none of which
+// semantically belong inside any of the original six). Still a modular
+// monolith, not microservices — inter-module calls are plain function
+// calls with no network hop.
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: true, trustProxy: true })
 
@@ -45,6 +47,7 @@ export function buildApp(): FastifyInstance {
   app.register(siteCaptureModule, { prefix: '/site-capture' })
   app.register(ussdModule, { prefix: '/ussd' })
   app.register(ledgerModule, { prefix: '/ledger' })
+  app.register(creditScoreModule, { prefix: '/credit-score' })
 
   return app
 }
