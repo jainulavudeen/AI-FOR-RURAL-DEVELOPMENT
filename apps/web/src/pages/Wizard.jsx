@@ -12,6 +12,7 @@ import { matchSpokenOption } from '../lib/voiceMatch'
 import ProgressBar from '../components/ProgressBar'
 import Icon from '../components/Icon'
 import VoiceInputButton from '../components/VoiceInputButton'
+import LocationDigipin from '../components/LocationDigipin'
 
 const MIN_MARGIN = 5000
 const MAX_MARGIN = 500000
@@ -190,6 +191,12 @@ export default function Wizard() {
                     </div>
                   </div>
                 </div>
+
+                <LocationDigipin
+                  digipin={selection.digipin}
+                  onPinned={({ digipin, lat, lon }) => updateSelection({ digipin, digipinLat: lat, digipinLon: lon })}
+                  onClear={() => updateSelection({ digipin: '', digipinLat: null, digipinLon: null })}
+                />
               </div>
             )}
 

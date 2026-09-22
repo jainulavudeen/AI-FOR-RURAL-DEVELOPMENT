@@ -23,7 +23,10 @@ const DIGIPIN_GRID = [
 
 const BOUNDS = { minLat: 2.5, maxLat: 38.5, minLon: 63.5, maxLon: 99.5 }
 
+const VALID_DIGIPIN = /^[23456789CJKLMPFT]{10}$/
+
 export class DigipinOutOfBoundsError extends Error {}
+export class DigipinFormatError extends Error {}
 
 export function encodeDigipin(lat, lon) {
   if (lat < BOUNDS.minLat || lat > BOUNDS.maxLat) {
@@ -57,4 +60,54 @@ export function encodeDigipin(lat, lon) {
   }
 
   return digipin
+}
+
+// Decode side of the same port — see the file header. Lets a user who
+// already knows their DIGIPIN (e.g. printed on a government document) skip
+// granting geolocation permission entirely.
+export function decodeDigipin(digipin) {
+  if (typeof digipin !== 'string') {
+    throw new DigipinFormatError('DIGIPIN must be provided as a string')
+  }
+
+  const pin = digipin.trim().toUpperCase()
+  if (pin.length !== 10) {
+    throw new DigipinFormatError('DIGIPIN must be a continuous 10-character string')
+  }
+  if (!VALID_DIGIPIN.test(pin)) {
+    throw new DigipinFormatError('DIGIPIN contains characters outside the approved DIGIPIN alphabet')
+  }
+
+  let minLat = BOUNDS.minLat
+  let maxLat = BOUNDS.maxLat
+  let minLon = BOUNDS.minLon
+  let maxLon = BOUNDS.maxLon
+
+  for (const char of pin) {
+    let ri = -1
+    let ci = -1
+    for (let r = 0; r < 4; r += 1) {
+      for (let c = 0; c < 4; c += 1) {
+        if (DIGIPIN_GRID[r][c] === char) {
+          ri = r
+          ci = c
+        }
+      }
+    }
+
+    const latDiv = (maxLat - minLat) / 4
+    const lonDiv = (maxLon - minLon) / 4
+
+    const lat1 = maxLat - latDiv * (ri + 1)
+    const lat2 = maxLat - latDiv * ri
+    const lon1 = minLon + lonDiv * ci
+    const lon2 = minLon + lonDiv * (ci + 1)
+
+    minLat = lat1
+    maxLat = lat2
+    minLon = lon1
+    maxLon = lon2
+  }
+
+  return { latitude: (minLat + maxLat) / 2, longitude: (minLon + maxLon) / 2 }
 }

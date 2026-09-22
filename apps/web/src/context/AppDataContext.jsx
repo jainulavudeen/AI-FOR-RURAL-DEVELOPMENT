@@ -14,6 +14,13 @@ const DEFAULT_SELECTION = {
   marginSource: 'self_reported',
   categoryId: '',
   isWomanOwned: false,
+  // Optional precision tag alongside the required state/district/block
+  // dropdowns — see components/LocationDigipin.jsx. Never resolves to a
+  // dropdown selection itself: no district/block boundary data exists yet
+  // to do that nationwide (CLAUDE.md Known Gaps).
+  digipin: '',
+  digipinLat: null,
+  digipinLon: null,
 }
 
 // Business-comparison mode is a separate, additive selection — not a
@@ -39,6 +46,14 @@ export function AppDataProvider({ children }) {
     })
   }
 
+  // Lets a caller (e.g. the Results page's "compare both" suggestion) jump
+  // straight to a specific comparison set, rather than going through the
+  // Wizard's tap-to-toggle grid one business at a time.
+  const startComparison = (businessIds) => {
+    setCompareBusinessIds(businessIds.slice(0, 3))
+    setHasComparison(true)
+  }
+
   const resetSelection = () => {
     setSelectionState(DEFAULT_SELECTION)
     setHasReport(false)
@@ -55,6 +70,7 @@ export function AppDataProvider({ children }) {
       setHasReport,
       compareBusinessIds,
       toggleCompareBusinessId,
+      startComparison,
       hasComparison,
       setHasComparison,
     }),

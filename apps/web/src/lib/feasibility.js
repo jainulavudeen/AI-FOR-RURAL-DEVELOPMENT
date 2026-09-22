@@ -8,6 +8,13 @@
 // seeded mock and apps/api's real data-backed assembly never silently drift
 // apart on the non-financial scoring constants they share.
 import { BASE_SCORE, DEFAULT_BASE_SCORE, clampScore, classifyVerdict } from '@setu/core'
+import { BUSINESS_TYPES } from '../data/businesses'
+
+// A suggestion only earns its place on the report if the gap is real, not
+// seeded noise — generateFeasibility's own demand/infra/market factors each
+// swing several points on identical inputs, so a 1-2 point "better" business
+// would just be noise dressed up as advice.
+const ALTERNATIVE_SCORE_MARGIN = 8
 
 const SOURCE_KEYS = {
   dairy: ['source.mandi', 'source.udyam', 'source.census', 'source.cooperative'],
@@ -111,6 +118,29 @@ export function generateFeasibility({ businessId, stateId, districtId, blockId }
     factors,
     insights: [...businessInsights, ...financialInsights],
   }
+}
+
+// Scans every other business type at the same location and surfaces the
+// highest-scoring one, if it clears ALTERNATIVE_SCORE_MARGIN over the
+// applicant's chosen business — reusing generateFeasibility exactly as
+// Compare.jsx already does (CLAUDE.md boundary rule 1: never fork the
+// scoring logic, only call it repeatedly). Returns null when the chosen
+// business is already the best option, or close enough that a suggestion
+// would just be noise.
+export function getBestAlternativeBusiness({ businessId, stateId, districtId, blockId }) {
+  const currentScore = generateFeasibility({ businessId, stateId, districtId, blockId }).score
+
+  let best = null
+  for (const business of BUSINESS_TYPES) {
+    if (business.id === businessId) continue
+    const feasibility = generateFeasibility({ businessId: business.id, stateId, districtId, blockId })
+    if (!best || feasibility.score > best.feasibility.score) {
+      best = { business, feasibility }
+    }
+  }
+
+  if (!best || best.feasibility.score - currentScore < ALTERNATIVE_SCORE_MARGIN) return null
+  return { ...best, currentScore }
 }
 
 // The informal-lender rate used to live here as a seeded-random mock. It's
