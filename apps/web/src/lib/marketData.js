@@ -138,6 +138,25 @@ export async function getFeasibilityScore(businessId, districtSlug, blockId, loc
 // the UI treats it as "nothing to show yet," not a failure.
 export const FALLBACK_PEER_BENCHMARK = { available: false }
 
+// GPS -> state/district name lookup backing LocationDigipin.jsx's "use my
+// current location" button. Returns null on any failure/no-match — the
+// caller (LocationDigipin) treats null exactly like a match that didn't
+// resolve against the mock catalogue: DIGIPIN pinning already succeeded
+// independently, so this never blocks or errors that, per CLAUDE.md rule 4.
+export async function getReverseGeocode(lat, lon) {
+  if (lat == null || lon == null) return null
+  try {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon) })
+    const response = await fetch(`${API_BASE}/feasibility/reverse-geocode?${params}`)
+    if (!response.ok) return null
+    const data = await response.json()
+    if (!data?.state) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
 export async function getPeerBenchmark(businessId, districtSlug, verdictKey) {
   if (!businessId || !districtSlug || !verdictKey) return FALLBACK_PEER_BENCHMARK
   try {

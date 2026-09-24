@@ -49,3 +49,33 @@ export const LOCATIONS = {
 }
 
 export const STATE_IDS = Object.keys(LOCATIONS)
+
+// Best-effort match of a reverse-geocoded state/district name (real-world
+// names, e.g. "Tamil Nadu" / "Madurai") against this mock catalogue's ids
+// (lowercase-underscore slugs of the same real names — 'tamil_nadu' /
+// 'madurai'). Only ever resolves for the 8 states x 5 districts listed
+// above; every other name legitimately returns '', which the caller
+// (LocationDigipin.jsx) surfaces as "location detected, not in our
+// coverage yet" rather than an error — this catalogue is a demo subset,
+// not the real district list nationwide (see CLAUDE.md).
+const DIACRITICS_RE = /[\u0300-\u036f]/g
+
+function normalizeForMatch(str) {
+  return str
+    .normalize('NFD')
+    .replace(DIACRITICS_RE, '')
+    .toLowerCase()
+    .replace(/\b(district|division|region|taluk|taluka)\b/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+export function matchLocationByName(stateName, districtName) {
+  const stateId = stateName ? STATE_IDS.find((id) => id === normalizeForMatch(stateName)) ?? '' : ''
+  if (!stateId) return { stateId: '', districtId: '' }
+
+  const districtId = districtName
+    ? LOCATIONS[stateId].districts.find((d) => d.id === normalizeForMatch(districtName))?.id ?? ''
+    : ''
+  return { stateId, districtId }
+}

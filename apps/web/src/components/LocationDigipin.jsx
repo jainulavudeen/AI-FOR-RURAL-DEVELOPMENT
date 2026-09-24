@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MapPin, Check, AlertTriangle, X } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { encodeDigipin, decodeDigipin, DigipinOutOfBoundsError, DigipinFormatError } from '../lib/digipin'
+import { getReverseGeocode } from '../lib/marketData'
+import { matchLocationByName } from '../data/locations'
 
 const geolocationSupported = () => typeof navigator !== 'undefined' && 'geolocation' in navigator
 
@@ -11,31 +13,75 @@ function getPosition() {
   })
 }
 
-// Optional DIGIPIN precision tag for the Wizard's location step — additive
-// to the required state/district/block dropdowns, never a replacement.
-// There's no district/block boundary data ingested anywhere in this repo
-// today (only Madurai's villages have real geometry — see CLAUDE.md Known
-// Gaps), so a DIGIPIN/GPS point can't be auto-resolved to a dropdown
-// selection nationwide; this only records a precise point alongside
-// whatever the applicant picks manually. Mirrors SiteCaptureCard.jsx's
-// geolocation -> encodeDigipin pattern, minus the camera/consent/report
-// linkage that's specific to site evidence.
-export default function LocationDigipin({ digipin, onPinned, onClear }) {
+// DIGIPIN precision tag for the Wizard's location step, additive to the
+// required state/district/block dropdowns. `onPinned` always fires (the
+// DIGIPIN math is pure client-side, never fails alongside a GPS success).
+// `onLocationResolved` is a second, independent, best-effort pass: it
+// calls the backend's /feasibility/reverse-geocode (real, keyless OSM
+// Nominatim lookup by default) and matches the returned state/district
+// name against data/locations.js's mock catalogue. It only ever resolves
+// for the 8 states x 5 districts in that catalogue — everywhere else
+// correctly reports "not in our coverage" rather than an error (CLAUDE.md
+// rule 4: degrade, don't error). Block never auto-fills: no block-level
+// boundary data exists anywhere, real or mock (see locations.js), same
+// precedent as Wizard.jsx's voice-input matching stopping at district.
+// Mirrors SiteCaptureCard.jsx's geolocation -> encodeDigipin pattern,
+// minus the camera/consent/report linkage specific to site evidence.
+export default function LocationDigipin({ digipin, onPinned, onClear, onLocationResolved, selectedStateId, selectedDistrictId }) {
   const { t } = useI18n()
   const [mode, setMode] = useState('idle') // idle | manual
   const [working, setWorking] = useState(false)
   const [manualInput, setManualInput] = useState('')
   const [errorReason, setErrorReason] = useState(null)
+  const [matchNotice, setMatchNotice] = useState(null) // null | 'matched' | 'stateOnly' | 'unmatched'
+
+  // Mirrors the Wizard's current state/district selection so the async
+  // reverse-geocode below can tell whether the user picked a district
+  // manually while the (unbounded, no-timeout) network round-trip was in
+  // flight. Without this, a manual pick made between "Use my location" and
+  // the network reply was silently overwritten the moment the reply
+  // landed — the exact bug where selecting a valid district "did nothing".
+  const latestSelectionRef = useRef({ stateId: selectedStateId, districtId: selectedDistrictId })
+  useEffect(() => {
+    latestSelectionRef.current = { stateId: selectedStateId, districtId: selectedDistrictId }
+  }, [selectedStateId, selectedDistrictId])
 
   const handleUseLocation = async () => {
+    const requestedFrom = { stateId: selectedStateId, districtId: selectedDistrictId }
     setWorking(true)
     setErrorReason(null)
+    setMatchNotice(null)
     try {
       const position = await getPosition()
       const { latitude, longitude } = position.coords
       const pin = encodeDigipin(latitude, longitude)
       onPinned({ digipin: pin, lat: latitude, lon: longitude })
       setMode('idle')
+
+      // Best-effort second pass — never throws past this point, and never
+      // undoes the DIGIPIN pin above just because reverse geocoding is
+      // slow, unreachable, or has no match in the mock catalogue.
+      const resolved = await getReverseGeocode(latitude, longitude)
+      const { stateId, districtId } = resolved ? matchLocationByName(resolved.state, resolved.district) : {}
+      const current = latestSelectionRef.current
+      const userChangedSelectionMeanwhile =
+        current.stateId !== requestedFrom.stateId || current.districtId !== requestedFrom.districtId
+
+      if (stateId && !userChangedSelectionMeanwhile) {
+        onLocationResolved?.({ stateId, districtId })
+        // District doesn't always match even when state does — the mock
+        // catalogue only covers 5 districts per state (see locations.js),
+        // so a real district outside that list correctly leaves districtId
+        // empty. Reporting that honestly rather than claiming both filled.
+        setMatchNotice(districtId ? 'matched' : 'stateOnly')
+      } else if (stateId && userChangedSelectionMeanwhile) {
+        // The user already made their own choice while this was in
+        // flight — deliberately drop the result rather than clobber it or
+        // show a match notice that would contradict what's actually
+        // selected now.
+      } else {
+        setMatchNotice('unmatched')
+      }
     } catch (err) {
       if (err instanceof DigipinOutOfBoundsError) setErrorReason('outOfBounds')
       else if (err?.code === 1) setErrorReason('locationDenied')
@@ -60,17 +106,37 @@ export default function LocationDigipin({ digipin, onPinned, onClear }) {
 
   if (digipin) {
     return (
-      <div className="mt-4 flex items-center gap-2 rounded-xl border border-teal-600/30 bg-teal-50/60 px-4 py-2.5">
-        <MapPin size={15} className="text-teal-700 shrink-0" />
-        <span className="text-xs text-teal-900">{t('wizard.digipinPinned', { digipin })}</span>
-        <button
-          type="button"
-          onClick={onClear}
-          aria-label={t('common.back')}
-          className="ml-auto text-teal-700/60 hover:text-teal-900"
-        >
-          <X size={14} />
-        </button>
+      <div className="mt-4">
+        <div className="flex items-center gap-2 rounded-xl border border-teal-600/30 bg-teal-50/60 px-4 py-2.5">
+          <MapPin size={15} className="text-teal-700 shrink-0" />
+          <span className="text-xs text-teal-900">{t('wizard.digipinPinned', { digipin })}</span>
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label={t('common.back')}
+            className="ml-auto text-teal-700/60 hover:text-teal-900"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        {matchNotice === 'matched' && (
+          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-teal-700">
+            <Check size={13} />
+            {t('wizard.digipinLocationMatched')}
+          </p>
+        )}
+        {matchNotice === 'stateOnly' && (
+          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-amber-700">
+            <Check size={13} />
+            {t('wizard.digipinLocationStateOnly')}
+          </p>
+        )}
+        {matchNotice === 'unmatched' && (
+          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-900/50">
+            <AlertTriangle size={13} />
+            {t('wizard.digipinLocationUnmatched')}
+          </p>
+        )}
       </div>
     )
   }

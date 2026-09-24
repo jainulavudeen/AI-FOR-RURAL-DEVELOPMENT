@@ -3,6 +3,7 @@ import { DigipinOutOfBoundsError, encodeDigipin } from '../../ingestion/digipin/
 import { narrateReport } from '../grounding/service'
 import { createAgmarknetProvider } from './agmarknetProvider'
 import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache'
+import { createGeocodingProvider } from './geocodingProvider'
 import { getPeerBenchmark } from './peerBenchmark'
 import { assembleFeasibilityScore, getInformalLendingRate, getLocalDemandSignal } from './service'
 import type { ScoreRequestBody } from './types'
@@ -17,6 +18,7 @@ const PEER_BENCHMARK_MAX_AGE = 60 * 60 // 1h — aggregate stat that shifts as m
 
 const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
   const agmarknetProvider = createAgmarknetProvider()
+  const geocodingProvider = createGeocodingProvider()
 
   // Unauthenticated/informational, same class as the GETs below. Resolves
   // the client's mock district/block slugs to real DB rows (only Madurai's
@@ -113,6 +115,26 @@ const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(400).send({ error: { message: err.message, code: 'OUT_OF_BOUNDS' } })
       }
       throw err
+    }
+  })
+
+  // Best-effort GPS -> state/district name resolution for the Wizard's
+  // "use my current location" button — the client matches the returned
+  // names against its own mock catalogue (CLAUDE.md rule 4: never blocks
+  // or errors, just resolves to nulls when the provider can't answer).
+  // Unauthenticated: same class as /digipin, a coordinate lookup with
+  // nothing identifying beyond the point itself.
+  fastify.get<{ Querystring: { lat?: string; lon?: string } }>('/reverse-geocode', async (request, reply) => {
+    const lat = Number(request.query.lat)
+    const lon = Number(request.query.lon)
+    if (!request.query.lat || !request.query.lon || Number.isNaN(lat) || Number.isNaN(lon)) {
+      return reply.status(400).send({ error: { message: 'lat and lon are required numbers', code: 'BAD_REQUEST' } })
+    }
+    try {
+      const result = await geocodingProvider.reverseGeocode(lat, lon)
+      return reply.status(200).send(result ?? { state: null, district: null })
+    } catch {
+      return reply.status(200).send({ state: null, district: null })
     }
   })
 }

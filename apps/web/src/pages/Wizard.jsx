@@ -217,8 +217,11 @@ export default function Wizard() {
 
                 <LocationDigipin
                   digipin={selection.digipin}
+                  selectedStateId={selection.stateId}
+                  selectedDistrictId={selection.districtId}
                   onPinned={({ digipin, lat, lon }) => updateSelection({ digipin, digipinLat: lat, digipinLon: lon })}
                   onClear={() => updateSelection({ digipin: '', digipinLat: null, digipinLon: null })}
+                  onLocationResolved={({ stateId, districtId }) => updateSelection({ stateId, districtId, blockId: '' })}
                 />
               </div>
             )}

@@ -17,6 +17,7 @@ const en = {
     schemes: 'Govt Schemes',
     architecture: 'How It Works',
     partners: 'Partner Dashboard',
+    more: 'More',
   },
   auth: {
     signIn: 'Sign in',
@@ -114,6 +115,9 @@ const en = {
     enterDigipinToggle: 'Enter DIGIPIN instead',
     digipinPlaceholder: '10-character DIGIPIN',
     digipinPinned: 'Location pinned: {{digipin}}',
+    digipinLocationMatched: 'State and district filled in from your location.',
+    digipinLocationStateOnly: 'State filled in from your location — your district isn’t in our list yet, please select it manually.',
+    digipinLocationUnmatched: 'Location pinned, but we don’t yet cover that area — please select state/district manually.',
     digipinError: {
       outOfBounds: 'This location is outside India’s DIGIPIN coverage.',
       locationDenied: 'Location access was denied — try entering your DIGIPIN instead.',
@@ -1012,6 +1016,7 @@ const hi = {
     schemes: 'सरकारी योजनाएं',
     architecture: 'यह कैसे काम करता है',
     partners: 'पार्टनर डैशबोर्ड',
+    more: 'अधिक',
   },
   auth: {
     signIn: 'साइन इन करें',
@@ -1109,6 +1114,9 @@ const hi = {
     enterDigipinToggle: 'इसके बजाय DIGIPIN डालें',
     digipinPlaceholder: '10 अक्षरों का DIGIPIN',
     digipinPinned: 'स्थान चिह्नित: {{digipin}}',
+    digipinLocationMatched: 'आपके स्थान से राज्य और जिला अपने आप भर दिए गए।',
+    digipinLocationStateOnly: 'आपके स्थान से राज्य भर दिया गया — आपका जिला अभी हमारी सूची में नहीं है, कृपया इसे खुद चुनें।',
+    digipinLocationUnmatched: 'स्थान चिह्नित हो गया, लेकिन हम अभी उस क्षेत्र को कवर नहीं करते — कृपया राज्य/जिला खुद चुनें।',
     digipinError: {
       outOfBounds: 'यह स्थान भारत के DIGIPIN कवरेज से बाहर है।',
       locationDenied: 'स्थान की अनुमति नहीं मिली — इसके बजाय अपना DIGIPIN डालने का प्रयास करें।',
@@ -2007,6 +2015,7 @@ const ta = {
     schemes: 'அரசு திட்டங்கள்',
     architecture: 'இது எப்படி செயல்படுகிறது',
     partners: 'பங்குதாரர் டாஷ்போர்டு',
+    more: 'மேலும்',
   },
   auth: {
     signIn: 'உள் நுழையவும்',
@@ -2104,6 +2113,9 @@ const ta = {
     enterDigipinToggle: 'அதற்கு பதிலாக DIGIPIN ஐ உள்ளிடவும்',
     digipinPlaceholder: '10-எழுத்து DIGIPIN',
     digipinPinned: 'இருப்பிடம் குறிக்கப்பட்டது: {{digipin}}',
+    digipinLocationMatched: 'உங்கள் இருப்பிடத்திலிருந்து மாநிலம் மற்றும் மாவட்டம் தானாக நிரப்பப்பட்டது.',
+    digipinLocationStateOnly: 'உங்கள் இருப்பிடத்திலிருந்து மாநிலம் நிரப்பப்பட்டது — உங்கள் மாவட்டம் இன்னும் எங்கள் பட்டியலில் இல்லை, தயவுசெய்து அதை கைமுறையாக தேர்ந்தெடுக்கவும்.',
+    digipinLocationUnmatched: 'இருப்பிடம் குறிக்கப்பட்டது, ஆனால் அந்தப் பகுதியை நாங்கள் இன்னும் உள்ளடக்கவில்லை — மாநிலம்/மாவட்டத்தை கைமுறையாக தேர்ந்தெடுக்கவும்.',
     digipinError: {
       outOfBounds: 'இந்த இடம் இந்தியாவின் DIGIPIN வரம்பிற்கு வெளியே உள்ளது.',
       locationDenied: 'இருப்பிட அனுமதி மறுக்கப்பட்டது — அதற்கு பதிலாக உங்கள் DIGIPIN ஐ உள்ளிடவும்.',

@@ -42,6 +42,18 @@ const envSchema = z.object({
   // embeddings partner. Mock default, same shape as LLM_PROVIDER.
   EMBEDDING_PROVIDER: z.enum(['mock', 'real']).default('mock'),
   VOYAGE_API_KEY: z.string().optional(),
+  // Reverse-geocodes the Wizard's "use my current location" GPS point to a
+  // state/district name (apps/web then matches that against its mock
+  // location catalogue — see data/locations.js's matchLocationByName).
+  // Unlike every other provider above, OpenStreetMap Nominatim needs no
+  // credential/partnership, so this defaults to 'real' rather than 'mock'
+  // — GEOCODING_PROVIDER=mock opts back out for tests/fully-offline dev
+  // with zero outbound calls. See modules/feasibility/geocodingProvider.ts.
+  GEOCODING_PROVIDER: z.enum(['mock', 'real']).default('real'),
+  // Nominatim's usage policy requires an identifying User-Agent (no key)
+  // and caps at ~1 req/sec — fine here since this is only ever triggered
+  // by one explicit user tap, never bulk/automated.
+  GEOCODING_USER_AGENT: z.string().default('Setu-SIH26091/1.0 (Smart India Hackathon submission; no contact configured)'),
 })
 
 export const env = envSchema.parse(process.env)
