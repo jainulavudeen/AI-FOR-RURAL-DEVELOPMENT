@@ -57,26 +57,15 @@ export async function getInformalLendingRate(districtSlug) {
   }
 }
 
-// Same fetch-with-fallback shape as getInformalLendingRate — see
-// apps/api/src/modules/feasibility/service.ts's getLocalDemandSignal,
-// which already never throws server-side; this is a second, independent
-// degrade layer for when the API itself is unreachable from the client
-// (offline, DNS failure). 'district' is a plain name string (the mock
-// slug capitalized), not a UUID — the backend's Agmarknet lookup matches
-// on name, unlike the informal-lending-rate endpoint.
-export const FALLBACK_DEMAND_SIGNAL = { value: 0, label: 'neutral', asOf: null, commoditiesReported: 0 }
-
-export async function getLocalDemandSignal(districtSlug) {
-  if (!districtSlug) return FALLBACK_DEMAND_SIGNAL
-  const districtName = districtSlug.charAt(0).toUpperCase() + districtSlug.slice(1)
-  try {
-    const response = await fetch(`${API_BASE}/feasibility/local-demand?district=${encodeURIComponent(districtName)}`)
-    if (!response.ok) return FALLBACK_DEMAND_SIGNAL
-    return await response.json()
-  } catch {
-    return FALLBACK_DEMAND_SIGNAL
-  }
-}
+// A standalone client-side call to GET /feasibility/local-demand used to
+// live here, overlaying just the demand factor onto the seeded mock
+// score. Removed with the mock itself (CLAUDE.md item 4: real scoring
+// replaces it wholesale via getFeasibilityScore below, which already
+// composes the same Agmarknet-backed demand signal server-side through
+// assembleFeasibilityScore) — a second, separate client fetch of the same
+// signal was redundant once the composite endpoint existed. The backend
+// route itself is untouched and still real, tested, independently
+// reachable infrastructure; only this now-dead client wrapper is gone.
 
 // Real, data-backed factor assembly (Census infra + NRLM SHG density,
 // narrated via the grounding service) — see apps/api's

@@ -38,7 +38,7 @@ export default function Wizard() {
   // Renders from the static catalogue instantly (zero network, works
   // offline) — the DB-backed GET /business-types is a non-blocking
   // enrichment pass on top, same "renders now, enriches later if it
-  // resolves" shape as lib/feasibility.js's applyDemandSignal. A brand-new
+  // resolves" shape as lib/feasibility.js's applyRealFactors. A brand-new
   // business type added only to the DB (no app redeploy) will appear here
   // once the fetch resolves; a fully offline device just never sees it.
   const [businessTypes, setBusinessTypes] = useState(BUSINESS_TYPES)

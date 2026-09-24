@@ -125,10 +125,21 @@ export interface FeasibilityFactor {
   source: { label: string; asOf: string | null; datasetVersionId?: string | null }
 }
 
+// A factor the score does NOT include, and why — CLAUDE.md item 4's
+// explicit rule: "when a factor's data is missing for a block, say so on
+// screen and exclude it from the score — do NOT silently substitute a
+// national average and present it as local." reasonKey is an i18n key,
+// not raw English, so the frontend can render it in the current language.
+export interface ExcludedFactor {
+  labelKey: string
+  reasonKey: 'results.factorExcludedNoData'
+}
+
 export interface FeasibilityScoreResult {
   score: number
   verdictKey: string
   factors: FeasibilityFactor[]
+  excludedFactors: ExcludedFactor[]
   narration: NarrationResult
 }
 
@@ -139,38 +150,74 @@ export interface AssembleFeasibilityScoreDeps {
   narrate: (input: NarrationInput) => Promise<NarrationResult>
 }
 
+const DEMAND_SIGNAL_LABELS: Record<string, string> = { live: 'live', cached: 'cached' }
+const INFRA_SHG_LABELS: Record<string, string> = { real_block: 'real (block-level)', real_district: 'real (district-level)' }
+
 // The real composite score — replaces apps/web's seeded-random mock
 // (CLAUDE.md: "assembles real Census / Mission Antyodaya / NRLM factors...
-// replaces the deterministic mock factors currently in the frontend"). Each
-// non-baseline factor keeps its own source/vintage (rule 3) — the
-// factor-by-factor breakdown never collapses into a bare number. Resolving
+// replaces the deterministic mock factors currently in the frontend").
+// Only the baseline (a business-type prior, not location data) is always
+// included; every other factor is included only when its underlying
+// signal actually resolved to real data — a signal that came back
+// 'neutral' (no data for this district/block) is dropped from both the
+// factor list AND the score sum, listed in excludedFactors instead, never
+// silently zeroed in as if "neutral" meant "measured as average." Each
+// included factor keeps its own source/vintage (rule 3). Resolving
 // district/block names to real DB rows is done by the caller (routes.ts)
 // before this is called, so this function itself never throws: every
 // signal it composes already degrades to neutral on its own (rule 4).
 export async function assembleFeasibilityScore(
   deps: AssembleFeasibilityScoreDeps,
-  request: Pick<ScoreRequestBody, 'businessId' | 'locale'> & { districtName: string; blockId: string | null }
+  request: Pick<ScoreRequestBody, 'businessId' | 'locale'> & { districtName: string; districtId: string | null; blockId: string | null }
 ): Promise<FeasibilityScoreResult> {
   const base = BASE_SCORE[request.businessId] ?? DEFAULT_BASE_SCORE
 
   const [demand, infra, shg] = await Promise.all([
     getLocalDemandSignal(deps.redis, deps.agmarknetProvider, request.districtName),
-    getInfraSignal(deps.db, request.blockId),
-    getShgSignal(deps.db, request.blockId),
+    getInfraSignal(deps.db, request.districtId, request.blockId),
+    getShgSignal(deps.db, request.districtId, request.blockId),
   ])
-
-  const score = clampScore(base + demand.value + infra.value + shg.value)
-  const verdictKey = classifyVerdict(score)
 
   const factors: FeasibilityFactor[] = [
     { labelKey: 'results.factorBaseline', value: base, isBaseline: true, source: { label: 'baseline', asOf: null } },
-    { labelKey: 'results.factorDemand', value: demand.value, source: { label: demand.label, asOf: demand.asOf } },
-    { labelKey: 'results.factorInfrastructure', value: infra.value, source: { label: infra.label, asOf: infra.asOf, datasetVersionId: infra.datasetVersionId } },
-    { labelKey: 'results.factorMarket', value: shg.value, source: { label: shg.label, asOf: shg.asOf, datasetVersionId: shg.datasetVersionId } },
   ]
+  const excludedFactors: ExcludedFactor[] = []
+
+  if (demand.label === 'neutral') {
+    excludedFactors.push({ labelKey: 'results.factorDemand', reasonKey: 'results.factorExcludedNoData' })
+  } else {
+    factors.push({
+      labelKey: 'results.factorDemand',
+      value: demand.value,
+      source: { label: DEMAND_SIGNAL_LABELS[demand.label] ?? demand.label, asOf: demand.asOf },
+    })
+  }
+
+  if (infra.label === 'neutral') {
+    excludedFactors.push({ labelKey: 'results.factorInfrastructure', reasonKey: 'results.factorExcludedNoData' })
+  } else {
+    factors.push({
+      labelKey: 'results.factorInfrastructure',
+      value: infra.value,
+      source: { label: INFRA_SHG_LABELS[infra.label] ?? infra.label, asOf: infra.asOf, datasetVersionId: infra.datasetVersionId },
+    })
+  }
+
+  if (shg.label === 'neutral') {
+    excludedFactors.push({ labelKey: 'results.factorMarket', reasonKey: 'results.factorExcludedNoData' })
+  } else {
+    factors.push({
+      labelKey: 'results.factorMarket',
+      value: shg.value,
+      source: { label: INFRA_SHG_LABELS[shg.label] ?? shg.label, asOf: shg.asOf, datasetVersionId: shg.datasetVersionId },
+    })
+  }
+
+  const score = clampScore(factors.reduce((sum, f) => sum + f.value, 0))
+  const verdictKey = classifyVerdict(score)
 
   const narration = await deps.narrate({
-    numbers: { score, baseline: base, demand: demand.value, infrastructure: infra.value, market: shg.value },
+    numbers: Object.fromEntries(factors.map((f) => [f.labelKey, f.value]).concat([['results.score', score]])),
     factors: factors.map((f) => ({ labelKey: f.labelKey, value: f.value })),
     schemeId: request.businessId,
     schemeName: `${request.businessId} feasibility assessment`,
@@ -178,5 +225,5 @@ export async function assembleFeasibilityScore(
     locale: request.locale ?? 'en',
   })
 
-  return { score, verdictKey, factors, narration }
+  return { score, verdictKey, factors, excludedFactors, narration }
 }

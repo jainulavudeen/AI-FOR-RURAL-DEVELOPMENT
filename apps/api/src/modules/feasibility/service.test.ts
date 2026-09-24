@@ -1,5 +1,6 @@
 import RedisMock from 'ioredis-mock'
 import { describe, expect, it } from 'vitest'
+import { villageAmenities, villages } from '../../db/schema'
 import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
 import { assembleFeasibilityScore, findDistrictIdByName, getInformalLendingRate, getLocalDemandSignal } from './service'
 
@@ -91,7 +92,7 @@ describe('getInformalLendingRate', () => {
 })
 
 describe('assembleFeasibilityScore', () => {
-  it('composes baseline + demand + infra + shg into a clamped score, keeping each factor sourced, and narrates it', async () => {
+  it('composes baseline + a real demand signal, excludes infra/shg (no district/block data), and narrates it', async () => {
     const redis = new RedisMock()
     await redis.flushall()
     const provider = makeProvider(async (district): Promise<RawMarketActivity> => ({
@@ -100,7 +101,7 @@ describe('assembleFeasibilityScore', () => {
       fetchedAt: new Date().toISOString(),
     }))
     const narrate = async (input: import('../grounding/types').NarrationInput) => ({
-      text: `narrated score ${input.numbers.score}`,
+      text: `narrated score ${input.numbers['results.score']}`,
       narrationSource: 'llm' as const,
       tier: 'fast' as const,
     })
@@ -108,17 +109,66 @@ describe('assembleFeasibilityScore', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await assembleFeasibilityScore(
       { db: {} as any, redis, agmarknetProvider: provider, narrate },
-      { businessId: 'dairy', districtName: 'Madurai', blockId: null }
+      { businessId: 'dairy', districtName: 'Madurai', districtId: null, blockId: null }
     )
 
     expect(result.score).toBeGreaterThanOrEqual(32)
     expect(result.score).toBeLessThanOrEqual(96)
-    expect(result.factors).toHaveLength(4)
     expect(result.factors.find((f) => f.isBaseline)?.value).toBe(78) // dairy baseline
-    // blockId: null -> infra/shg never touch the db, both neutral
-    expect(result.factors.find((f) => f.labelKey === 'results.factorInfrastructure')?.source.label).toBe('neutral')
-    expect(result.factors.find((f) => f.labelKey === 'results.factorMarket')?.source.label).toBe('neutral')
+    expect(result.factors.find((f) => f.labelKey === 'results.factorDemand')).toBeDefined()
+    // districtId/blockId: null -> infra/shg never touch the db, both neutral
+    // -> excluded from the score entirely, not included as a fake zero.
+    expect(result.factors.find((f) => f.labelKey === 'results.factorInfrastructure')).toBeUndefined()
+    expect(result.factors.find((f) => f.labelKey === 'results.factorMarket')).toBeUndefined()
+    expect(result.excludedFactors).toEqual(
+      expect.arrayContaining([
+        { labelKey: 'results.factorInfrastructure', reasonKey: 'results.factorExcludedNoData' },
+        { labelKey: 'results.factorMarket', reasonKey: 'results.factorExcludedNoData' },
+      ])
+    )
     expect(result.narration.text).toContain(String(result.score))
+  })
+
+  it('includes infra as a real, sourced factor once a district/block resolves to real ingested data', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const provider = makeProvider(async () => {
+      throw new Error('agmarknet down') // keep demand neutral/excluded to isolate the infra assertion
+    })
+    const narrate = async () => ({ text: 'ok', narrationSource: 'llm' as const, tier: 'fast' as const })
+
+    const fakeDb = {
+      select: () => ({
+        from: (table: unknown) => {
+          if (table === villages) return { where: () => Promise.resolve([{ id: 'village-1' }]) }
+          if (table === villageAmenities) {
+            return {
+              innerJoin: () => ({
+                where: () =>
+                  Promise.resolve([
+                    { availableInVillage: true, datasetVersionId: 'v1', vintageLabel: 'Census 2011' },
+                    { availableInVillage: true, datasetVersionId: 'v1', vintageLabel: 'Census 2011' },
+                  ]),
+              }),
+            }
+          }
+          // blocks (shgSignal's district-level lookup) / shg_registry — no
+          // SHG data in this fixture, isolating the infra assertion.
+          return { where: () => Promise.resolve([]), innerJoin: () => ({ where: () => Promise.resolve([]) }) }
+        },
+      }),
+    }
+
+    const result = await assembleFeasibilityScore(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { db: fakeDb as any, redis, agmarknetProvider: provider, narrate },
+      { businessId: 'dairy', districtName: 'Madurai', districtId: 'district-1', blockId: 'block-1' }
+    )
+
+    const infraFactor = result.factors.find((f) => f.labelKey === 'results.factorInfrastructure')
+    expect(infraFactor).toBeDefined()
+    expect(infraFactor?.source.label).toContain('real')
+    expect(infraFactor?.source.datasetVersionId).toBe('v1')
   })
 })
 

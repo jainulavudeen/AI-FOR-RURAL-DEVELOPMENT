@@ -8,14 +8,8 @@ import { useAppData } from '../context/AppDataContext'
 import { LOCATIONS } from '../data/locations'
 import { BUSINESS_TYPES } from '../data/businesses'
 import { getEligibleSchemes, structureFinance, buildEmiSchedule } from '@setu/core'
-import { generateFeasibility, applyDemandSignal, applyRealFactors, getBestAlternativeBusiness } from '../lib/feasibility'
-import {
-  FALLBACK_INFORMAL_RATE,
-  FALLBACK_DEMAND_SIGNAL,
-  getInformalLendingRate,
-  getLocalDemandSignal,
-  getFeasibilityScore,
-} from '../lib/marketData'
+import { generateFeasibility, applyRealFactors, getBestAlternativeBusiness } from '../lib/feasibility'
+import { FALLBACK_INFORMAL_RATE, getInformalLendingRate, getFeasibilityScore } from '../lib/marketData'
 import { saveReport } from '../lib/feedback'
 import { formatINR, formatIndianNumber, formatPercent } from '../lib/format'
 import RadialGauge from '../components/RadialGauge'
@@ -115,26 +109,14 @@ export default function Results() {
     }
   }, [selection.stateId, selection.districtId, selection.blockId])
 
-  // Renders instantly on the seeded baseline (offline-first, per CLAUDE.md),
-  // then overlays the real Agmarknet-derived signal once/if it resolves —
-  // never blocks the first paint. See lib/feasibility.js's applyDemandSignal.
-  const [demandSignal, setDemandSignal] = useState(FALLBACK_DEMAND_SIGNAL)
-  useEffect(() => {
-    let cancelled = false
-    setDemandSignal(FALLBACK_DEMAND_SIGNAL)
-    getLocalDemandSignal(selection.districtId).then((signal) => {
-      if (!cancelled) setDemandSignal(signal)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [selection.districtId])
-
-  // Same non-blocking overlay pattern, one step further: real Census
-  // infra + NRLM SHG factors and the grounding narration, from apps/api's
-  // composite POST /feasibility/score. See lib/feasibility.js's
-  // applyRealFactors — a no-op today for any block whose name doesn't
-  // resolve to real ingested data (CLAUDE.md's naming-scheme gap).
+  // Renders instantly on the offline, baseline-only estimate (CLAUDE.md
+  // rule 4: a screen must render with nothing but cached state), then
+  // replaces it wholesale with the real composite score — real Census
+  // infra + Agmarknet demand + NRLM SHG factors, each with its own
+  // source and vintage, plus the grounding narration — from apps/api's
+  // POST /feasibility/score, once/if that resolves. See
+  // lib/feasibility.js's applyRealFactors for why this is a replacement,
+  // not a factor-by-factor overlay onto fake seeded numbers.
   const [realFactors, setRealFactors] = useState(null)
   useEffect(() => {
     let cancelled = false
@@ -147,10 +129,7 @@ export default function Results() {
     }
   }, [selection.businessId, selection.districtId, selection.blockId, language])
 
-  const feasibility = useMemo(
-    () => applyRealFactors(applyDemandSignal(baseFeasibility, demandSignal), realFactors),
-    [baseFeasibility, demandSignal, realFactors]
-  )
+  const feasibility = useMemo(() => applyRealFactors(baseFeasibility, realFactors), [baseFeasibility, realFactors])
 
   // Best-effort, silent persistence of every completed report a logged-in
   // applicant views — not just the ones they appeal. Feeds the peer
@@ -255,15 +234,22 @@ export default function Results() {
           transition={{ duration: 0.5 }}
           className="rounded-3xl border border-primary-100 bg-white card-shadow-lg p-6 sm:p-8"
         >
-          <div className="mb-6">
-            <h2 className="text-lg font-bold text-primary-900">{t('results.module1Title')}</h2>
-            <p className="text-xs text-ink-900/45 mt-0.5">{t('results.module1Subtitle')}</p>
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-bold text-primary-900">{t('results.module1Title')}</h2>
+              <p className="text-xs text-ink-900/45 mt-0.5">{t('results.module1Subtitle')}</p>
+            </div>
+            {feasibility.isEstimate && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-[10.5px] font-bold text-amber-700">
+                {t('results.estimateBadge')}
+              </span>
+            )}
           </div>
 
           <RadialGauge score={feasibility.score} verdict={t(feasibility.verdictKey)} />
 
           <div className="mt-8">
-            <ScoreBreakdown factors={feasibility.factors} />
+            <ScoreBreakdown factors={feasibility.factors} excludedFactors={feasibility.excludedFactors} />
           </div>
 
           {alternative && (

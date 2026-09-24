@@ -42,7 +42,7 @@ const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
         agmarknetProvider,
         narrate: (input) => narrateReport({ db: fastify.db, redis: fastify.redis }, input),
       },
-      { businessId, districtName: districtId, blockId: resolvedBlockId, locale }
+      { businessId, districtName: districtId, districtId: resolvedDistrictId, blockId: resolvedBlockId, locale }
     )
 
     return reply.status(200).send(result)

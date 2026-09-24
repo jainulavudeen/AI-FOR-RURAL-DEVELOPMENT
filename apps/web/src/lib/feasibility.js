@@ -80,21 +80,29 @@ function seededRandoms(seedStr, count) {
   return out
 }
 
+// Offline/first-paint estimate — baseline only (a business-type prior,
+// not location data). Demand/infrastructure/market used to be filled in
+// with seeded-random noise dressed up as real numbers; CLAUDE.md item 4
+// is explicit that this was dishonest ("hashes the inputs into a fake but
+// stable number") and must not coexist with the real scoring path. So
+// this now only ever returns what's genuinely knowable with zero network:
+// the business type's baseline. The other three factors are reported as
+// excluded (offline, not "measured as zero"), and applyRealFactors below
+// replaces this whole result once the real composite score from
+// POST /feasibility/score resolves — never merges partial fake numbers
+// into it.
 export function generateFeasibility({ businessId, stateId, districtId, blockId }) {
   const seedStr = `${businessId}|${stateId}|${districtId}|${blockId}`
   const rand = seededRandoms(seedStr, 8)
 
   const base = BASE_SCORE[businessId] ?? DEFAULT_BASE_SCORE
-  const demandFactor = Math.round((rand[1] - 0.5) * 14) // -7..7
-  const infraFactor = Math.round((rand[2] - 0.5) * 12) // -6..6
-  const marketFactor = Math.round((rand[3] - 0.5) * 10) // -5..5
-  const score = clampScore(base + demandFactor + infraFactor + marketFactor)
+  const score = clampScore(base)
 
-  const factors = [
-    { labelKey: 'results.factorBaseline', value: base, isBaseline: true },
-    { labelKey: 'results.factorDemand', value: demandFactor },
-    { labelKey: 'results.factorInfrastructure', value: infraFactor },
-    { labelKey: 'results.factorMarket', value: marketFactor },
+  const factors = [{ labelKey: 'results.factorBaseline', value: base, isBaseline: true, source: { label: 'baseline', asOf: null } }]
+  const excludedFactors = [
+    { labelKey: 'results.factorDemand', reasonKey: 'results.factorExcludedOffline' },
+    { labelKey: 'results.factorInfrastructure', reasonKey: 'results.factorExcludedOffline' },
+    { labelKey: 'results.factorMarket', reasonKey: 'results.factorExcludedOffline' },
   ]
 
   const verdictKey = classifyVerdict(score)
@@ -131,6 +139,8 @@ export function generateFeasibility({ businessId, stateId, districtId, blockId }
     score,
     verdictKey,
     factors,
+    excludedFactors,
+    isEstimate: true,
     insights: [...businessInsights, ...financialInsights],
   }
 }
@@ -165,63 +175,29 @@ export function getBestAlternativeBusiness({ businessId, stateId, districtId, bl
 // regional estimate) instead of a per-block fabricated number. See
 // CLAUDE.md.
 
-// Overlays a real Agmarknet-derived local-demand signal (lib/marketData.js's
-// getLocalDemandSignal) onto the seeded base result. generateFeasibility
-// itself stays synchronous and offline-first (CLAUDE.md: a screen must
-// render with nothing but cached state) — this is a pure, optional second
-// pass applied once/if the live signal resolves, never blocking the first
-// render. Only overrides when the signal is better than nothing: a
-// 'neutral' label means Agmarknet was unavailable, so the seeded factor
-// (itself in the same -7..7 range) is left standing rather than zeroed out.
-export function applyDemandSignal(feasibility, signal) {
-  if (!signal || signal.label === 'neutral') return feasibility
-
-  const factors = feasibility.factors.map((f) =>
-    f.labelKey === 'results.factorDemand'
-      ? { ...f, value: signal.value, sourceNote: signal.label, sourceAsOf: signal.asOf }
-      : f
-  )
-  const demandDelta = signal.value - (feasibility.factors.find((f) => f.labelKey === 'results.factorDemand')?.value ?? 0)
-  const score = clampScore(feasibility.score + demandDelta)
-  const verdictKey = classifyVerdict(score)
-
-  return { ...feasibility, score, verdictKey, factors }
-}
-
-// Overlays the real, ingested-data-backed infra/market factors (Census
-// village_amenities, NRLM SHG registry) and the grounding narration from
-// apps/api's POST /feasibility/score (lib/marketData.js's
-// getFeasibilityScore), once/if that resolves — same non-blocking overlay
-// pattern as applyDemandSignal. Only overrides a factor whose real source
-// isn't 'neutral': today, every block resolves to 'neutral' infra/market
-// data (the mock block names don't match real Census/Mission Antyodaya
-// blocks, and NRLM SHG data hasn't been sourced at all — see CLAUDE.md
-// Known Gaps), so this is honestly a no-op until real data lands for a
-// resolvable block. `real` is `null` whenever the API call itself failed
-// or is still in flight.
+// Replaces the offline baseline-only estimate wholesale with the real
+// composite result from apps/api's POST /feasibility/score
+// (lib/marketData.js's getFeasibilityScore), once/if that resolves —
+// CLAUDE.md item 4: real scoring and the seeded mock never run side by
+// side past this point, so this is a replacement, not a factor-by-factor
+// overlay (the old design merged real numbers into fake ones factor by
+// factor; there are no fake demand/infra/market numbers left to merge
+// into). `real` is `null` whenever the API call failed, is still in
+// flight, or the device is offline — the baseline-only estimate stays
+// standing in that case (CLAUDE.md rule 4: a screen must render with
+// nothing but cached state, and a less-explained report beats a blocked
+// one). The server already excludes any factor with no real data behind
+// it (real.excludedFactors) rather than sending a fake zero, so nothing
+// here needs to re-apply that logic.
 export function applyRealFactors(feasibility, real) {
   if (!real) return feasibility
-
-  let factors = feasibility.factors
-  let scoreDelta = 0
-
-  for (const labelKey of ['results.factorInfrastructure', 'results.factorMarket']) {
-    const realFactor = real.factors?.find((f) => f.labelKey === labelKey)
-    if (!realFactor || realFactor.source?.label === 'neutral') continue
-
-    const currentValue = factors.find((f) => f.labelKey === labelKey)?.value ?? 0
-    scoreDelta += realFactor.value - currentValue
-    factors = factors.map((f) =>
-      f.labelKey === labelKey
-        ? { ...f, value: realFactor.value, sourceNote: realFactor.source.label, sourceAsOf: realFactor.source.asOf }
-        : f
-    )
+  return {
+    ...feasibility,
+    score: real.score,
+    verdictKey: real.verdictKey,
+    factors: real.factors,
+    excludedFactors: real.excludedFactors ?? [],
+    narration: real.narration,
+    isEstimate: false,
   }
-
-  if (scoreDelta === 0 && !real.narration) return feasibility
-
-  const score = clampScore(feasibility.score + scoreDelta)
-  const verdictKey = classifyVerdict(score)
-
-  return { ...feasibility, score, verdictKey, factors, narration: real.narration ?? feasibility.narration }
 }
