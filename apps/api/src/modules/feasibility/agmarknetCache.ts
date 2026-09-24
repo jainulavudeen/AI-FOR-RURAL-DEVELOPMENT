@@ -1,5 +1,5 @@
-import type { RedisLike } from '../../lib/redis/types'
-import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
+import type { RedisLike } from '../../lib/redis/types.js'
+import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider.js'
 
 const FRESH_SECONDS = 6 * 60 * 60 // 6h — Agmarknet itself refreshes ~daily; well inside a day
 const TTL_SECONDS = 48 * 60 * 60 // 48h — stale data is still useful; beyond this, nothing

@@ -1,4 +1,4 @@
-import type { BlockRow, DistrictRow, ParsedAdminHierarchy } from './types'
+import type { BlockRow, DistrictRow, ParsedAdminHierarchy } from './types.js'
 
 export interface LoadDeps {
   // Bulk upsert, keyed on districts.code (the stable shrid2 prefix, not

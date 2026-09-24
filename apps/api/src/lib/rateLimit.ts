@@ -1,4 +1,4 @@
-import type { RedisLike } from './redis/types'
+import type { RedisLike } from './redis/types.js'
 
 export interface RateLimitResult {
   allowed: boolean

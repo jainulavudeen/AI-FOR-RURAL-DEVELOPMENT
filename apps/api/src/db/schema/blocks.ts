@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { geometry } from './customTypes'
-import { districts } from './districts'
+import { geometry } from './customTypes.js'
+import { districts } from './districts.js'
 
 export const blocks = pgTable(
   'blocks',

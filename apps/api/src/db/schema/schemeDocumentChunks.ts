@@ -1,8 +1,8 @@
 import { sql } from 'drizzle-orm'
 import { index, integer, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core'
-import { EMBEDDING_DIMENSIONS } from '../../config/constants'
-import { vector } from './customTypes'
-import { schemeDocuments } from './schemeDocuments'
+import { EMBEDDING_DIMENSIONS } from '../../config/constants.js'
+import { vector } from './customTypes.js'
+import { schemeDocuments } from './schemeDocuments.js'
 
 // The actual embeddable/retrievable unit. `section` is kept per chunk (not
 // just on the parent document) so a citation can point at "NSFDC — Eligibility

@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import type { LedgerTransaction } from '@setu/core'
-import { buildFinancialSnapshot } from '../../lib/financialSnapshot'
-import { computeApprovalSignatureHash } from '../../lib/approvalSignature'
-import type { AuditLogEntryInput } from '../../lib/auditLog'
+import { buildFinancialSnapshot } from '../../lib/financialSnapshot.js'
+import { computeApprovalSignatureHash } from '../../lib/approvalSignature.js'
+import type { AuditLogEntryInput } from '../../lib/auditLog.js'
 import type {
   ApproveDossierBody,
   BankDossierRecord,
@@ -10,7 +10,7 @@ import type {
   DossierSnapshot,
   GenerateDossierBody,
   VerifyApprovalResult,
-} from './types'
+} from './types.js'
 
 export class NotFoundError extends Error {
   statusCode = 404

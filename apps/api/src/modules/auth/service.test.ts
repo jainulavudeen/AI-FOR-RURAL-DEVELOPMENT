@@ -1,8 +1,8 @@
-import { createFakeRedis } from '../../testUtils/fakeRedis'
+import { createFakeRedis } from '../../testUtils/fakeRedis.js'
 import { describe, expect, it } from 'vitest'
-import { otpKeys } from './otp'
-import { logout, refreshSession, requestOtp, verifyOtp, type Applicant, type AuthDeps } from './service'
-import type { SmsProvider } from './smsProvider'
+import { otpKeys } from './otp.js'
+import { logout, refreshSession, requestOtp, verifyOtp, type Applicant, type AuthDeps } from './service.js'
+import type { SmsProvider } from './smsProvider.js'
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))

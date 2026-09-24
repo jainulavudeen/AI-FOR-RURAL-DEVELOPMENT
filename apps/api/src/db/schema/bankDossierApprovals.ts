@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
-import { bankDossiers } from './bankDossiers'
+import { applicants } from './applicants.js'
+import { bankDossiers } from './bankDossiers.js'
 
 // "Verified Approval" (never "digitally signed" — no government DSC exists
 // here, see CLAUDE.md item 7). Append-only, same posture as bank_dossiers

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import type { ConsentRecord, ConsentScope, ConsentStatus, FinancialDataSnapshot, FinancialTransaction } from './types'
+import type { ConsentRecord, ConsentScope, ConsentStatus, FinancialDataSnapshot, FinancialTransaction } from './types.js'
 
 export interface AccountAggregatorProvider {
   requestConsent(applicantId: string, scope: ConsentScope): Promise<ConsentRecord>

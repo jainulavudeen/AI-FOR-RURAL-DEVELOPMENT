@@ -1,5 +1,5 @@
 import { summarizeLedger, type LedgerSummary, type LedgerTransaction } from '@setu/core'
-import type { CreateTransactionBody, LedgerTransactionRecord } from './types'
+import type { CreateTransactionBody, LedgerTransactionRecord } from './types.js'
 
 const VALID_TYPES = ['sale', 'expense', 'udhaar_given', 'udhaar_repaid']
 const VALID_PAYMENT_MODES = ['cash', 'upi']

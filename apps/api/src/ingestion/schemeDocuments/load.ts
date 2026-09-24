@@ -1,8 +1,8 @@
-import { sha256Hex } from '../../lib/hash'
-import type { EmbeddingProvider } from '../../llm/embeddingProvider'
-import { toVectorLiteral } from '../../llm/embeddingProvider'
-import { chunkDocument } from './chunk'
-import type { CorpusDocument } from './types'
+import { sha256Hex } from '../../lib/hash.js'
+import type { EmbeddingProvider } from '../../llm/embeddingProvider.js'
+import { toVectorLiteral } from '../../llm/embeddingProvider.js'
+import { chunkDocument } from './chunk.js'
+import type { CorpusDocument } from './types.js'
 
 // The re-embed trigger CLAUDE.md asks for: "embed scheme eligibility
 // documents once and re-embed on document change, tracked by a content

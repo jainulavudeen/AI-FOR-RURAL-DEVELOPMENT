@@ -1,10 +1,9 @@
 import multipart from '@fastify/multipart'
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { PDFParse } from 'pdf-parse'
-import { bankStatementUploads, ledgerTransactions } from '../../db/schema'
-import { uploadBankStatement, MAX_FILE_SIZE_BYTES, type BankStatementDeps } from './service'
-import type { ParsedBankTransaction } from './types'
+import { bankStatementUploads, ledgerTransactions } from '../../db/schema/index.js'
+import { uploadBankStatement, MAX_FILE_SIZE_BYTES, type BankStatementDeps } from './service.js'
+import type { ParsedBankTransaction } from './types.js'
 
 // Auth-gated — writes into the caller's own ledger, same "saving" class as
 // the ledger module itself. Registers @fastify/multipart locally, scoped
@@ -15,6 +14,14 @@ const bankStatementRoutes: FastifyPluginAsync = async (fastify) => {
 
   const deps: BankStatementDeps = {
     extractText: async (buffer) => {
+      // Deferred, not a top-level import: pdf-parse pulls in pdfjs-dist's
+      // legacy canvas polyfill chain, which crashes at import time in a
+      // Node serverless environment lacking the optional @napi-rs/canvas
+      // native dependency — that must not take down the whole API (every
+      // other route in this app has nothing to do with PDF parsing).
+      // Deferring it here means only an actual upload attempt hits that
+      // failure, not every cold start.
+      const { PDFParse } = await import('pdf-parse')
       const parser = new PDFParse({ data: buffer })
       try {
         const result = await parser.getText()

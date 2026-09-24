@@ -1,6 +1,6 @@
-import type { RedisLike } from '../../lib/redis/types'
-import type { Db } from '../../db/client'
-import { findBlockIdByName, findDistrictIdByName } from './service'
+import type { RedisLike } from '../../lib/redis/types.js'
+import type { Db } from '../../db/client.js'
+import { findBlockIdByName, findDistrictIdByName } from './service.js'
 
 // District/block name->id lookups almost never change mid-session (or
 // mid-day) — real reference data, not a live signal like Agmarknet. Read-

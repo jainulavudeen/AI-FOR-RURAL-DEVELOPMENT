@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { boolean, index, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { districts } from './districts'
+import { districts } from './districts.js'
 
 // Two-tier lookup for the "cost of inaction" card: a district-specific
 // rate if one has been ingested, else the single district_id-null

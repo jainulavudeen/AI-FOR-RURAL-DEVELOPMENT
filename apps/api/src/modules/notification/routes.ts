@@ -1,11 +1,11 @@
 import { eq, sql } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { applicants, reports, schemeRules } from '../../db/schema'
-import { createPushProvider } from './pushAdapter'
-import { NotFoundError, notifySchemeChange, sendNotification, type NotificationDeps } from './service'
-import { createSmsNotificationProvider } from './smsAdapter'
-import type { NotificationChannel, SendRequestBody } from './types'
-import { createWhatsappProvider } from './whatsappAdapter'
+import { applicants, reports, schemeRules } from '../../db/schema/index.js'
+import { createPushProvider } from './pushAdapter.js'
+import { NotFoundError, notifySchemeChange, sendNotification, type NotificationDeps } from './service.js'
+import { createSmsNotificationProvider } from './smsAdapter.js'
+import type { NotificationChannel, SendRequestBody } from './types.js'
+import { createWhatsappProvider } from './whatsappAdapter.js'
 
 // Gated — see CLAUDE.md / apps/api/src/plugins/auth.ts: auth gates saving,
 // appealing, and notifications, never the deterministic calculator.

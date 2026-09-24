@@ -1,4 +1,4 @@
-import type { GroundedClaim, Locale, NarrationInput } from './types'
+import type { GroundedClaim, Locale, NarrationInput } from './types.js'
 
 // Deterministic, no LLM — CLAUDE.md rule 4: a less-explained report is
 // acceptable, a hanging or erroring one is not. These fire whenever the LLM

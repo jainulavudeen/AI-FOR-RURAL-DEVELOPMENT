@@ -1,7 +1,7 @@
 import { eq, inArray } from 'drizzle-orm'
-import type { Db } from '../../db/client'
-import { blocks, datasetVersions, shgRegistry } from '../../db/schema'
-import type { DataBackedFactor } from './types'
+import type { Db } from '../../db/client.js'
+import { blocks, datasetVersions, shgRegistry } from '../../db/schema/index.js'
+import type { DataBackedFactor } from './types.js'
 
 const NEUTRAL: DataBackedFactor = { value: 0, label: 'neutral', asOf: null, datasetVersionId: null }
 const SHG_SATURATION_COUNT = 20 // active SHGs at/above this reads as the top of the range

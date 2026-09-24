@@ -1,8 +1,8 @@
-import { createFakeRedis } from '../../testUtils/fakeRedis'
+import { createFakeRedis } from '../../testUtils/fakeRedis.js'
 import { describe, expect, it, vi } from 'vitest'
-import { villageAmenities, villages } from '../../db/schema'
-import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
-import { assembleFeasibilityScore, findDistrictIdByName, getInformalLendingRate, getLocalDemandSignal } from './service'
+import { villageAmenities, villages } from '../../db/schema/index.js'
+import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider.js'
+import { assembleFeasibilityScore, findDistrictIdByName, getInformalLendingRate, getLocalDemandSignal } from './service.js'
 
 function makeProvider(fn: AgmarknetProvider['fetchDistrictActivity']): AgmarknetProvider {
   return { fetchDistrictActivity: fn }

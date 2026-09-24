@@ -1,5 +1,5 @@
-import { env } from '../../config/env'
-import type { NotificationProvider } from './types'
+import { env } from '../../config/env.js'
+import type { NotificationProvider } from './types.js'
 
 // A separate adapter from auth/smsProvider.ts on purpose: that one talks to
 // MSG91's OTP-template endpoint (a fixed code, not free text) — wrong tool

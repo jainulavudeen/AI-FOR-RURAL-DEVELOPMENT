@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chunkDocument } from './chunk'
+import { chunkDocument } from './chunk.js'
 
 describe('chunkDocument', () => {
   it('keeps a short section as a single chunk, tagged with its section name', () => {

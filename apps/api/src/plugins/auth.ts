@@ -1,8 +1,8 @@
 import fp from 'fastify-plugin'
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import jwt from 'jsonwebtoken'
-import { env } from '../config/env'
-import type { AccessTokenClaims } from '../modules/auth/tokens'
+import { env } from '../config/env.js'
+import type { AccessTokenClaims } from '../modules/auth/tokens.js'
 
 declare module 'fastify' {
   interface FastifyInstance {

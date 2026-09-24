@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { businessTypes } from '../../db/schema'
-import { listBusinessTypes, type BusinessTypeRecord, type BusinessTypesDeps } from './service'
+import { businessTypes } from '../../db/schema/index.js'
+import { listBusinessTypes, type BusinessTypeRecord, type BusinessTypesDeps } from './service.js'
 
 // Public, unauthenticated — reference/catalogue data, same class as
 // feasibility's informational GETs (CLAUDE.md: auth only gates saving,

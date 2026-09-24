@@ -1,5 +1,5 @@
-import { env } from '../config/env'
-import { sha256Hex } from './hash'
+import { env } from '../config/env.js'
+import { sha256Hex } from './hash.js'
 
 // "Verified Approval", not a digital signature — this repo has no
 // government DSC (Digital Signature Certificate) integration, and

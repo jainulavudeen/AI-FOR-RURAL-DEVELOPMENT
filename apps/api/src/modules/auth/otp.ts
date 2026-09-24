@@ -1,5 +1,5 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto'
-import { env } from '../../config/env'
+import { env } from '../../config/env.js'
 
 export function generateOtpCode(): string {
   return String(randomInt(0, 1_000_000)).padStart(6, '0')

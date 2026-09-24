@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeSchemeChange, isMaterialSchemeChange, type SchemeRuleSnapshot } from './schemeChangeDiff'
+import { describeSchemeChange, isMaterialSchemeChange, type SchemeRuleSnapshot } from './schemeChangeDiff.js'
 
 const base: SchemeRuleSnapshot = { schemeId: 'micro_finance', version: 1, interestRate: 8, loanCap: 125000 }
 

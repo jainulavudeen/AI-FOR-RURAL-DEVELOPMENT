@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { check, date, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { blocks } from './blocks'
-import { datasetVersions } from './datasetVersions'
+import { blocks } from './blocks.js'
+import { datasetVersions } from './datasetVersions.js'
 
 // NRLM SHG registry — active Self-Help Groups per block, by social
 // category. Block grain (not village), matching the source's actual

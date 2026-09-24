@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getBlocks, getDistricts, getStates, ValidationError, type GeographyDeps } from './service'
+import { getBlocks, getDistricts, getStates, ValidationError, type GeographyDeps } from './service.js'
 
 function makeDeps(overrides: Partial<GeographyDeps> = {}): GeographyDeps {
   return {

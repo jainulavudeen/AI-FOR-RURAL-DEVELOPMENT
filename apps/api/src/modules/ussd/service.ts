@@ -1,5 +1,5 @@
-import type { RedisLike } from '../../lib/redis/types'
-import { entryScreen, handleInput, initialSession, type UssdSession } from './sessionMachine'
+import type { RedisLike } from '../../lib/redis/types.js'
+import { entryScreen, handleInput, initialSession, type UssdSession } from './sessionMachine.js'
 
 // "Session times out fast" — USSD sessions are conventionally much
 // shorter-lived than a web session (the telecom gateway itself usually

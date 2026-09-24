@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { EmbeddingProvider } from '../../llm/embeddingProvider'
-import { computeContentHash, loadCorpusDocument, type ExistingDocument, type LoadDeps } from './load'
-import type { CorpusDocument } from './types'
+import type { EmbeddingProvider } from '../../llm/embeddingProvider.js'
+import { computeContentHash, loadCorpusDocument, type ExistingDocument, type LoadDeps } from './load.js'
+import type { CorpusDocument } from './types.js'
 
 function makeEmbeddingProvider(): { provider: EmbeddingProvider; calls: string[] } {
   const calls: string[] = []

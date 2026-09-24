@@ -1,4 +1,4 @@
-import type { RawFacilityRecord, RowValidationError, ValidFacilityRow } from './types'
+import type { RawFacilityRecord, RowValidationError, ValidFacilityRow } from './types.js'
 
 export interface ValidationOutcome {
   valid: ValidFacilityRow[]

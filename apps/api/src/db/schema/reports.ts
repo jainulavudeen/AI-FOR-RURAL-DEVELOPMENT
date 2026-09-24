@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
-import { schemeRules } from './schemeRules'
+import { applicants } from './applicants.js'
+import { schemeRules } from './schemeRules.js'
 
 // One row per generated report. `scheme_rules_version` is a hard FK to the
 // exact scheme_rules row used — the whole point of versioning that table.

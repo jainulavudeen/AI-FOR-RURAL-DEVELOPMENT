@@ -1,0 +1,19 @@
+# Repo-root .vercelignore — used when `vercel deploy` runs from the repo
+# root (required for a monorepo project with a "Root Directory" setting:
+# Vercel needs the whole tree uploaded so it can scope into that
+# subdirectory server-side; deploying directly from inside the
+# subdirectory double-nests the path and fails). CLI deploy uploads the
+# raw filesystem regardless of .gitignore, so this needs its own excludes.
+node_modules/
+dist/
+apps/api/data/
+.git/
+*.log
+# Loose local-only files sitting at the repo root (never committed,
+# nothing to do with the app) — root-anchored so this doesn't also catch
+# real build assets like apps/web/public/*.png.
+/*.MOV
+/*.mov
+/*.jpeg
+/*.jpg
+/*.png

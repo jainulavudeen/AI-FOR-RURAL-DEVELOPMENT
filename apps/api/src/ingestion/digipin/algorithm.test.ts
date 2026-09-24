@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DigipinFormatError, DigipinOutOfBoundsError, decodeDigipin, encodeDigipin } from './algorithm'
+import { DigipinFormatError, DigipinOutOfBoundsError, decodeDigipin, encodeDigipin } from './algorithm.js'
 
 describe('encodeDigipin', () => {
   it('matches the official worked example from INDIAPOST-gov/digipin', () => {

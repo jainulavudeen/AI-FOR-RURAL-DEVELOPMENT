@@ -1,5 +1,5 @@
 import { Redis as UpstashRedis } from '@upstash/redis'
-import type { RedisLike } from './types'
+import type { RedisLike } from './types.js'
 
 // Same "degrade instead of erroring" intent as ioredisClient.ts (CLAUDE.md
 // rule 4), adapted for a stateless HTTP client with no persistent-connection

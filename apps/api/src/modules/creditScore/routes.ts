@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
-import { ledgerTransactions } from '../../db/schema'
-import { getCreditScore, type CreditScoreDeps } from './service'
+import { ledgerTransactions } from '../../db/schema/index.js'
+import { getCreditScore, type CreditScoreDeps } from './service.js'
 
 // Auth-gated — reads the caller's own ledger only (request.user.sub), same
 // "no ownership-mismatch branch needed" posture as the ledger module

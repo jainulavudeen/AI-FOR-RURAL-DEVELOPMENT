@@ -1,4 +1,4 @@
-import type { NotificationProvider } from './types'
+import type { NotificationProvider } from './types.js'
 
 // Push wasn't part of this pass's ask (SMS + WhatsApp were) but was
 // already a declared NotificationChannel — implemented for completeness so

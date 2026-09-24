@@ -1,4 +1,4 @@
-import type { ValidFacilityRow } from './types'
+import type { ValidFacilityRow } from './types.js'
 
 export interface UpsertIndicatorInput {
   villageId: string

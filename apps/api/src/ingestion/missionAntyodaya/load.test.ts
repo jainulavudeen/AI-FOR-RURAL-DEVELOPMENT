@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { loadFacilityRows, type LoadDeps } from './load'
-import type { ValidFacilityRow } from './types'
+import { loadFacilityRows, type LoadDeps } from './load.js'
+import type { ValidFacilityRow } from './types.js'
 
 function makeFakeDb() {
   const blocksByName = new Map<string, string>()

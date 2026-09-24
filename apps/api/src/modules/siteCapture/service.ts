@@ -1,4 +1,4 @@
-import type { CreateSiteCaptureBody, SiteCapture } from './types'
+import type { CreateSiteCaptureBody, SiteCapture } from './types.js'
 
 // A base64 data URL runs ~33% larger than the underlying bytes — 400 KB of
 // encoded text is roughly a 300 KB JPEG, already generous for what

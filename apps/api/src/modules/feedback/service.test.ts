@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { CpgramsAdapter } from './cpgramsAdapter'
-import { SLA_BREACH_HOURS } from './escalation'
+import type { CpgramsAdapter } from './cpgramsAdapter.js'
+import { SLA_BREACH_HOURS } from './escalation.js'
 import {
   ConflictError,
   ForbiddenError,
@@ -17,7 +17,7 @@ import {
   updateAppealStatus,
   type Appeal,
   type FeedbackDeps,
-} from './service'
+} from './service.js'
 
 function makeAppeal(overrides: Partial<Appeal> = {}): Appeal {
   return {

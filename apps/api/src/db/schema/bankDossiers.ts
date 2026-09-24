@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
+import { applicants } from './applicants.js'
 
 // A frozen, point-in-time snapshot of an applicant's financial position —
 // generated on demand, then immutable, the same "freeze at generation

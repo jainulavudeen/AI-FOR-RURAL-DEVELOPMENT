@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import jwt from 'jsonwebtoken'
-import type { RedisLike } from '../../lib/redis/types'
-import { env } from '../../config/env'
+import type { RedisLike } from '../../lib/redis/types.js'
+import { env } from '../../config/env.js'
 
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60
 export const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60

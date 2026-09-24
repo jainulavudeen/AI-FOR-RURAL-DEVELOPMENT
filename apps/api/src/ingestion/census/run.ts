@@ -1,13 +1,13 @@
-import '../../config/loadEnv'
+import '../../config/loadEnv.js'
 import { existsSync } from 'node:fs'
 import { eq, sql } from 'drizzle-orm'
-import { db } from '../../db/client'
-import { blocks, districts, villageAmenities, villages } from '../../db/schema'
-import { backfillDigipins } from '../digipin/backfill'
-import { recordDatasetVersion } from '../datasetVersions'
-import { loadCensusRows, type LoadDeps } from './load'
-import { parseCensusFiles, type CensusFilePaths } from './parse'
-import { validateRows } from './validate'
+import { db } from '../../db/client.js'
+import { blocks, districts, villageAmenities, villages } from '../../db/schema/index.js'
+import { backfillDigipins } from '../digipin/backfill.js'
+import { recordDatasetVersion } from '../datasetVersions.js'
+import { loadCensusRows, type LoadDeps } from './load.js'
+import { parseCensusFiles, type CensusFilePaths } from './parse.js'
+import { validateRows } from './validate.js'
 
 const DATA_DIR = new URL('../../../data/ingestion', import.meta.url).pathname
 

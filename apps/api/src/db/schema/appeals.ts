@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { check, index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
-import { reports } from './reports'
+import { applicants } from './applicants.js'
+import { reports } from './reports.js'
 
 // Officers are applicants-table rows distinguished by `role` (see
 // applicants.ts) rather than a separate table — matches the phone-only

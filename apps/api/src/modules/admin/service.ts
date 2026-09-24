@@ -1,4 +1,4 @@
-import type { AuditLogEntryInput } from '../../lib/auditLog'
+import type { AuditLogEntryInput } from '../../lib/auditLog.js'
 import type {
   AdminAppealListItem,
   AdminReportListItem,
@@ -8,7 +8,7 @@ import type {
   OfficerStats,
   ReassignAppealBody,
   ReportFilters,
-} from './types'
+} from './types.js'
 
 export class ForbiddenError extends Error {
   statusCode = 403

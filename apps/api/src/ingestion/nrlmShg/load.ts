@@ -1,4 +1,4 @@
-import type { ValidShgRow } from './types'
+import type { ValidShgRow } from './types.js'
 
 export interface UpsertShgInput {
   blockId: string

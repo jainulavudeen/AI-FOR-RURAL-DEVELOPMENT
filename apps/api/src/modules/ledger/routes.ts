@@ -1,9 +1,9 @@
 import { desc, eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import type { LedgerPaymentMode, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
-import { ledgerTransactions } from '../../db/schema'
-import { getLedgerSummary, listTransactions, recordTransaction, type LedgerDeps } from './service'
-import type { CreateTransactionBody, LedgerTransactionRecord } from './types'
+import { ledgerTransactions } from '../../db/schema/index.js'
+import { getLedgerSummary, listTransactions, recordTransaction, type LedgerDeps } from './service.js'
+import type { CreateTransactionBody, LedgerTransactionRecord } from './types.js'
 
 function rowToRecord(row: typeof ledgerTransactions.$inferSelect): LedgerTransactionRecord {
   return {

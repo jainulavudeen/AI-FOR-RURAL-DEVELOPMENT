@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { sendNotImplemented } from '../../lib/notImplemented'
-import type { EmiRequestBody, StructureRequestBody } from './types'
+import { sendNotImplemented } from '../../lib/notImplemented.js'
+import type { EmiRequestBody, StructureRequestBody } from './types.js'
 
 // Mirrors packages/core for server-side audit. Routes are stubbed — request
 // validation, persistence (writing a `reports` row with its scheme_rules_version

@@ -1,6 +1,6 @@
-import { createFakeRedis } from '../../testUtils/fakeRedis'
+import { createFakeRedis } from '../../testUtils/fakeRedis.js'
 import { describe, expect, it } from 'vitest'
-import { processUssdTurn } from './service'
+import { processUssdTurn } from './service.js'
 
 describe('processUssdTurn', () => {
   it('shows the entry menu on true first contact (empty input, no prior session)', async () => {

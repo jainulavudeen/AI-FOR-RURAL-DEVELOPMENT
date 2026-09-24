@@ -1,4 +1,4 @@
-import { encodeDigipin } from './algorithm'
+import { encodeDigipin } from './algorithm.js'
 
 export interface VillageCoordinate {
   id: string

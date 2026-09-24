@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { check, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
+import { applicants } from './applicants.js'
 
 // Append-only audit trail for every Account Aggregator fetch attempt —
 // "log what was fetched and why." One row per attempt, success or

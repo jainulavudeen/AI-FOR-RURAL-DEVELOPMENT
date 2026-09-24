@@ -1,5 +1,5 @@
-import { env } from '../config/env'
-import { EMBEDDING_DIMENSIONS } from '../config/constants'
+import { env } from '../config/env.js'
+import { EMBEDDING_DIMENSIONS } from '../config/constants.js'
 
 export interface EmbeddingProvider {
   embed(text: string): Promise<number[]>

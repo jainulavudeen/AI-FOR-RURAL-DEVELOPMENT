@@ -1,10 +1,10 @@
 import { schemeEnglishLabel, type LedgerTransaction } from '@setu/core'
-import { queryWithClaims, type GroundingDeps } from '../grounding/service'
-import { retrieveGroundedClaims } from '../grounding/retrieval'
-import type { GroundedClaim, Locale } from '../grounding/types'
-import { createEmbeddingProvider } from '../../llm/embeddingProvider'
-import { buildFinancialSnapshot, type ApplicantSelection, type FinancialSnapshot } from '../../lib/financialSnapshot'
-import type { ChatRequestBody, ChatResult } from './types'
+import { queryWithClaims, type GroundingDeps } from '../grounding/service.js'
+import { retrieveGroundedClaims } from '../grounding/retrieval.js'
+import type { GroundedClaim, Locale } from '../grounding/types.js'
+import { createEmbeddingProvider } from '../../llm/embeddingProvider.js'
+import { buildFinancialSnapshot, type ApplicantSelection, type FinancialSnapshot } from '../../lib/financialSnapshot.js'
+import type { ChatRequestBody, ChatResult } from './types.js'
 
 export class ValidationError extends Error {
   statusCode = 400

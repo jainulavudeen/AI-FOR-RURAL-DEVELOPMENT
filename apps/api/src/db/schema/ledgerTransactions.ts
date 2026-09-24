@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { check, index, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
+import { applicants } from './applicants.js'
 
 // Bahi-Khata — the daily cash-flow ledger a micro-entrepreneur logs sales,
 // stock expenses and customer credit (udhaar) into. Append-only, like

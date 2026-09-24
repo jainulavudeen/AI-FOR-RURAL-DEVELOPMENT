@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { boolean, index, numeric, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { villages } from './villages'
-import { datasetVersions } from './datasetVersions'
+import { villages } from './villages.js'
+import { datasetVersions } from './datasetVersions.js'
 
 // Census 2011 Village Directory — nearest-facility distances. Deliberately
 // long/tall (facilityType as a free-text column, not fixed bank/market/

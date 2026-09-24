@@ -1,9 +1,9 @@
-import { createFakeRedis } from '../../testUtils/fakeRedis'
+import { createFakeRedis } from '../../testUtils/fakeRedis.js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { LlmProvider, LlmTier } from '../../llm/client'
-import type { EmbeddingProvider } from '../../llm/embeddingProvider'
-import { estimateFeasibilityFactors, narrateReport, query, queryWithClaims } from './service'
-import type { NarrationInput, QueryRequestBody } from './types'
+import type { LlmProvider, LlmTier } from '../../llm/client.js'
+import type { EmbeddingProvider } from '../../llm/embeddingProvider.js'
+import { estimateFeasibilityFactors, narrateReport, query, queryWithClaims } from './service.js'
+import type { NarrationInput, QueryRequestBody } from './types.js'
 
 function makeLlmProvider(fn: LlmProvider['generate']): LlmProvider {
   return { generate: fn }

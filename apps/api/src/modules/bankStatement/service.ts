@@ -1,5 +1,5 @@
-import { parseBankStatementText } from './pdfParser'
-import type { ParsedBankTransaction, UploadBankStatementResult } from './types'
+import { parseBankStatementText } from './pdfParser.js'
+import type { ParsedBankTransaction, UploadBankStatementResult } from './types.js'
 
 export class ValidationError extends Error {
   statusCode = 400

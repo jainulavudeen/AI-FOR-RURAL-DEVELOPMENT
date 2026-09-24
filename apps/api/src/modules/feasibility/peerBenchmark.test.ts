@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getPeerBenchmark, K_ANONYMITY_THRESHOLD } from './peerBenchmark'
+import { getPeerBenchmark, K_ANONYMITY_THRESHOLD } from './peerBenchmark.js'
 
 // Drizzle's chainable query builder is mocked by hand here rather than
 // pulled in for real — the point under test is the k-anonymity gate and

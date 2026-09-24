@@ -1,9 +1,9 @@
 import fp from 'fastify-plugin'
 import type { FastifyPluginAsync } from 'fastify'
-import { env } from '../config/env'
-import type { RedisLike } from '../lib/redis/types'
-import { createIoredisClient } from '../lib/redis/ioredisClient'
-import { createUpstashClient } from '../lib/redis/upstashClient'
+import { env } from '../config/env.js'
+import type { RedisLike } from '../lib/redis/types.js'
+import { createIoredisClient } from '../lib/redis/ioredisClient.js'
+import { createUpstashClient } from '../lib/redis/upstashClient.js'
 
 declare module 'fastify' {
   interface FastifyInstance {

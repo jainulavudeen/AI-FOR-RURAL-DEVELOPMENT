@@ -1,4 +1,4 @@
-import type { FinancialSnapshot, ApplicantSelection } from '../../lib/financialSnapshot'
+import type { FinancialSnapshot, ApplicantSelection } from '../../lib/financialSnapshot.js'
 
 // applicantId is deliberately absent — always request.user.sub, never
 // client-supplied. proprietorName/bankName have no persisted source

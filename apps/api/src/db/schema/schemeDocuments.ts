@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { datasetVersions } from './datasetVersions'
+import { datasetVersions } from './datasetVersions.js'
 
 // Doc-level identity for the grounding corpus (CLAUDE.md: NSFDC, NBCFDC,
 // NSKFDC, NHFDC, SEED, plus Jan Samarth). `contentHash` (sha256 of the full

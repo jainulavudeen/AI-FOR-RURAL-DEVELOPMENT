@@ -1,4 +1,4 @@
-import type { BlockOption, DistrictOption, StateOption } from './types'
+import type { BlockOption, DistrictOption, StateOption } from './types.js'
 
 export class ValidationError extends Error {
   statusCode = 400

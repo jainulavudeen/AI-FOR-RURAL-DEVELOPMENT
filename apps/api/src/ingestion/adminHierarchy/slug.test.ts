@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { slugify, titleCase } from './slug'
+import { slugify, titleCase } from './slug.js'
 
 describe('slugify', () => {
   it('lowercases and joins words with underscores', () => {

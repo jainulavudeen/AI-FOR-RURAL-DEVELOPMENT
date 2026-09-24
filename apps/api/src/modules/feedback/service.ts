@@ -3,10 +3,10 @@
 // write. Dependencies are injected (not imported directly) so the
 // round-robin/authorization logic is testable without a live Postgres —
 // same pattern as modules/auth/service.ts.
-import type { CpgramsAdapter } from './cpgramsAdapter'
-import { canApplicantEscalate, isSlaBreached, type EscalationReason } from './escalation'
-import type { AuditLogEntryInput } from '../../lib/auditLog'
-import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types'
+import type { CpgramsAdapter } from './cpgramsAdapter.js'
+import { canApplicantEscalate, isSlaBreached, type EscalationReason } from './escalation.js'
+import type { AuditLogEntryInput } from '../../lib/auditLog.js'
+import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types.js'
 
 export class ForbiddenError extends Error {
   statusCode = 403

@@ -1,5 +1,5 @@
-import type { Db } from '../db/client'
-import { datasetVersions } from '../db/schema'
+import type { Db } from '../db/client.js'
+import { datasetVersions } from '../db/schema/index.js'
 
 export interface RecordDatasetVersionInput {
   source: string

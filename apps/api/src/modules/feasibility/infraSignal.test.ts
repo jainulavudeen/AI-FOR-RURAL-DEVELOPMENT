@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { blocks, villageAmenities, villages } from '../../db/schema'
-import { getInfraSignal } from './infraSignal'
+import { blocks, villageAmenities, villages } from '../../db/schema/index.js'
+import { getInfraSignal } from './infraSignal.js'
 
 // Mimics the chained drizzle query builder, discriminating by which table
 // object `.from()` was called with (reference equality against the real

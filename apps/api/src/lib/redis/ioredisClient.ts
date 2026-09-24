@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis'
-import type { RedisLike } from './types'
+import type { RedisLike } from './types.js'
 
 // THE NON-NEGOTIABLE BOUNDARY (CLAUDE.md, rule 4): the app degrades instead
 // of erroring — a spinner that never resolves is not acceptable. ioredis's

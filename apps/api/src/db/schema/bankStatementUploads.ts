@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { check, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
+import { applicants } from './applicants.js'
 
 // Append-only audit trail for every bank-statement upload attempt —
 // success, partial (some lines couldn't be parsed), or failed — the same

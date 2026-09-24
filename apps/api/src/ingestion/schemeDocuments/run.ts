@@ -1,12 +1,12 @@
-import '../../config/loadEnv'
+import '../../config/loadEnv.js'
 import { readdirSync, readFileSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
-import { db } from '../../db/client'
-import { schemeDocumentChunks, schemeDocuments } from '../../db/schema'
-import { createEmbeddingProvider } from '../../llm/embeddingProvider'
-import { recordDatasetVersion } from '../datasetVersions'
-import { loadCorpusDocument, type LoadDeps } from './load'
-import type { CorpusDocument } from './types'
+import { db } from '../../db/client.js'
+import { schemeDocumentChunks, schemeDocuments } from '../../db/schema/index.js'
+import { createEmbeddingProvider } from '../../llm/embeddingProvider.js'
+import { recordDatasetVersion } from '../datasetVersions.js'
+import { loadCorpusDocument, type LoadDeps } from './load.js'
+import type { CorpusDocument } from './types.js'
 
 const CORPUS_DIR = new URL('./corpus', import.meta.url).pathname
 

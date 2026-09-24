@@ -1,5 +1,5 @@
-import type { ParsedRow } from './parse'
-import type { RowValidationError, SocialCategory, ValidShgRow } from './types'
+import type { ParsedRow } from './parse.js'
+import type { RowValidationError, SocialCategory, ValidShgRow } from './types.js'
 
 const VALID_CATEGORIES = new Set<SocialCategory>(['sc', 'st', 'obc', 'minority', 'general', 'total'])
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/

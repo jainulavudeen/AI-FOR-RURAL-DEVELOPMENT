@@ -1,9 +1,9 @@
-import { createFakeRedis } from '../../testUtils/fakeRedis'
+import { createFakeRedis } from '../../testUtils/fakeRedis.js'
 import { describe, expect, it, vi } from 'vitest'
 import type { LedgerTransaction } from '@setu/core'
-import type { LlmProvider, LlmTier } from '../../llm/client'
-import { chat, ValidationError } from './service'
-import type { AdvisorSaathiDeps } from './service'
+import type { LlmProvider, LlmTier } from '../../llm/client.js'
+import { chat, ValidationError } from './service.js'
+import type { AdvisorSaathiDeps } from './service.js'
 
 function makeLlmProvider(fn: LlmProvider['generate']): LlmProvider {
   return { generate: fn }

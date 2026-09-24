@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { aaFetchLog, applicants } from '../../db/schema'
-import { createAccountAggregatorProvider } from './provider'
-import { fetchAndDeriveMargin, getConsentStatus, requestConsent, type AccountAggregatorDeps } from './service'
-import type { FetchDataBody, RequestConsentBody } from './types'
+import { aaFetchLog, applicants } from '../../db/schema/index.js'
+import { createAccountAggregatorProvider } from './provider.js'
+import { fetchAndDeriveMargin, getConsentStatus, requestConsent, type AccountAggregatorDeps } from './service.js'
+import type { FetchDataBody, RequestConsentBody } from './types.js'
 
 // All routes here are gated behind fastify.authenticate — this is
 // squarely a "saving" action (CLAUDE.md: auth gates saving, appealing,

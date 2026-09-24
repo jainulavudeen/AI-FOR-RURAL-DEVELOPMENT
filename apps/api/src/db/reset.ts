@@ -1,7 +1,7 @@
-import '../config/loadEnv'
+import '../config/loadEnv.js'
 import { sql } from 'drizzle-orm'
-import { db } from './client'
-import { seedDemoData } from './seed'
+import { db } from './client.js'
+import { seedDemoData } from './seed.js'
 
 // Restores the demo dataset to a known-clean state between runs — for a
 // judge/demo reset, not a general-purpose "wipe the database" tool.

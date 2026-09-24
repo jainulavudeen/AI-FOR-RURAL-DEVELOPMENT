@@ -1,5 +1,5 @@
-import type { Locale } from '../grounding/types'
-import type { ApplicantSelection } from '../../lib/financialSnapshot'
+import type { Locale } from '../grounding/types.js'
+import type { ApplicantSelection } from '../../lib/financialSnapshot.js'
 
 // applicantId is deliberately absent — always request.user.sub, never
 // client-supplied. `selection` mirrors apps/web's AppDataContext shape —

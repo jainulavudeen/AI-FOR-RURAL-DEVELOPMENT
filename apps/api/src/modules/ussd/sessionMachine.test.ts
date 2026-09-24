@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { entryScreen, handleInput, initialSession, MAX_SCREEN_CHARS, type UssdSession } from './sessionMachine'
+import { entryScreen, handleInput, initialSession, MAX_SCREEN_CHARS, type UssdSession } from './sessionMachine.js'
 
 function allScreens(): string[] {
   // Exhaustively walk every reachable screen so the char-limit check below

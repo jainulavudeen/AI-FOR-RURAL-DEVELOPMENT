@@ -1,7 +1,7 @@
 import { and, asc, eq, isNotNull } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { blocks, districts } from '../../db/schema'
-import { getBlocks, getDistricts, getStates, type GeographyDeps } from './service'
+import { blocks, districts } from '../../db/schema/index.js'
+import { getBlocks, getDistricts, getStates, type GeographyDeps } from './service.js'
 
 const STATES_MAX_AGE = 7 * 24 * 60 * 60 // 7d — 35 states, essentially static reference data
 const DISTRICTS_MAX_AGE = 7 * 24 * 60 * 60

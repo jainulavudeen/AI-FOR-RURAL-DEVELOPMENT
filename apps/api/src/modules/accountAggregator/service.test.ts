@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { MockAccountAggregatorProvider } from './provider'
-import { ForbiddenError, fetchAndDeriveMargin, getConsentStatus, requestConsent, type AccountAggregatorDeps, type FetchLogInput } from './service'
-import type { ConsentRecord, ConsentScope } from './types'
+import { MockAccountAggregatorProvider } from './provider.js'
+import { ForbiddenError, fetchAndDeriveMargin, getConsentStatus, requestConsent, type AccountAggregatorDeps, type FetchLogInput } from './service.js'
+import type { ConsentRecord, ConsentScope } from './types.js'
 
 const SCOPE: ConsentScope = {
   fiTypes: ['DEPOSIT'],

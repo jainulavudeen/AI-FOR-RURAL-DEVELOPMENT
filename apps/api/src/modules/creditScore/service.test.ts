@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getCreditScore } from './service'
-import type { CreditScoreDeps } from './service'
+import { getCreditScore } from './service.js'
+import type { CreditScoreDeps } from './service.js'
 import type { LedgerTransaction } from '@setu/core'
 
 function makeDeps(transactions: LedgerTransaction[] = []): CreditScoreDeps {

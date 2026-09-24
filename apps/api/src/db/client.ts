@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { env } from '../config/env'
-import * as schema from './schema'
+import { env } from '../config/env.js'
+import * as schema from './schema/index.js'
 
 // prepare: false — required when DATABASE_URL points through a transaction-mode
 // PgBouncer pooler (e.g. Supabase's pooled connection string, port 6543):

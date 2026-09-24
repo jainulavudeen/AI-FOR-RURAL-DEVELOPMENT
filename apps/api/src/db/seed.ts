@@ -1,10 +1,10 @@
-import '../config/loadEnv'
+import '../config/loadEnv.js'
 import { isNull } from 'drizzle-orm'
 import { BASE_SCORE, buildEmiSchedule, classifyVerdict, MARGIN_PERCENT, SCHEMES, structureFinance } from '@setu/core'
-import type { Db } from './client'
-import { db } from './client'
-import { applicants, appeals, blocks, businessTypes, districts, informalLendingRates, reports, schemeRules } from './schema'
-import { K_ANONYMITY_THRESHOLD } from '../modules/feasibility/peerBenchmark'
+import type { Db } from './client.js'
+import { db } from './client.js'
+import { applicants, appeals, blocks, businessTypes, districts, informalLendingRates, reports, schemeRules } from './schema/index.js'
+import { K_ANONYMITY_THRESHOLD } from '../modules/feasibility/peerBenchmark.js'
 
 // Fixed demo phone numbers — sign in via the normal OTP flow (console
 // adapter logs the code) to see the Partner Dashboard's officer queue, or

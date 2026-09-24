@@ -1,9 +1,9 @@
 import { desc, eq, notInArray, sql } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { applicants, appeals, auditLog, feedbackFlags, reports } from '../../db/schema'
-import { getCurrentSchemeRuleVersion } from '../schemeRouter/service'
-import { createCpgramsAdapter } from './cpgramsAdapter'
-import type { EscalationReason } from './escalation'
+import { applicants, appeals, auditLog, feedbackFlags, reports } from '../../db/schema/index.js'
+import { getCurrentSchemeRuleVersion } from '../schemeRouter/service.js'
+import { createCpgramsAdapter } from './cpgramsAdapter.js'
+import type { EscalationReason } from './escalation.js'
 import {
   applicantEscalateAppeal,
   createAppeal,
@@ -16,8 +16,8 @@ import {
   type Appeal,
   type FeedbackDeps,
   type OfficerLoad,
-} from './service'
-import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types'
+} from './service.js'
+import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types.js'
 
 // 'escalated' is deliberately excluded — it's only ever reachable through
 // the dedicated escalate/sweep-sla routes below (which record a reason and

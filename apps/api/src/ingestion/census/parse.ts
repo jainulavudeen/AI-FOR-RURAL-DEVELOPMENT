@@ -1,7 +1,7 @@
 import { createReadStream, readFileSync } from 'node:fs'
 import { parse as parseSync } from 'csv-parse/sync'
 import { parse as parseStream } from 'csv-parse'
-import type { RawCensusRecord } from './types'
+import type { RawCensusRecord } from './types.js'
 
 // These are large national files (shrid2_spatial_stats.csv ~160MB,
 // pc11_vd_clean_shrid.csv ~683MB) — streamed and filtered to the target

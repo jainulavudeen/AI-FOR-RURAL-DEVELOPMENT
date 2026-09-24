@@ -1,4 +1,4 @@
-import type { CorpusSection } from './types'
+import type { CorpusSection } from './types.js'
 
 const MAX_CHUNK_CHARS = 800
 

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { LedgerTransaction } from '@setu/core'
-import { approveDossier, generateDossier, getDossier, verifyApprovalHash, ForbiddenError, NotFoundError, ValidationError } from './service'
-import type { BankDossierDeps } from './service'
-import type { BankDossierRecord, DossierApproval, DossierSnapshot } from './types'
+import { approveDossier, generateDossier, getDossier, verifyApprovalHash, ForbiddenError, NotFoundError, ValidationError } from './service.js'
+import type { BankDossierDeps } from './service.js'
+import type { BankDossierRecord, DossierApproval, DossierSnapshot } from './types.js'
 
 const sampleTransactions: LedgerTransaction[] = [
   { id: 't1', type: 'sale', amount: 3000, paymentMode: 'upi', occurredAt: '2026-09-01T00:00:00.000Z' },

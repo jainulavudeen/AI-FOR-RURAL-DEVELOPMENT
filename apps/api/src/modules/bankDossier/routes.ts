@@ -1,9 +1,9 @@
 import { desc, eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
-import { applicants, auditLog, bankDossierApprovals, bankDossiers, ledgerTransactions } from '../../db/schema'
-import { approveDossier, generateDossier, getDossier, getDossierApprovals, verifyApprovalHash, type BankDossierDeps } from './service'
-import type { ApproveDossierBody, BankDossierRecord, DossierApproval, DossierSnapshot, GenerateDossierBody } from './types'
+import { applicants, auditLog, bankDossierApprovals, bankDossiers, ledgerTransactions } from '../../db/schema/index.js'
+import { approveDossier, generateDossier, getDossier, getDossierApprovals, verifyApprovalHash, type BankDossierDeps } from './service.js'
+import type { ApproveDossierBody, BankDossierRecord, DossierApproval, DossierSnapshot, GenerateDossierBody } from './types.js'
 
 function rowToRecord(row: typeof bankDossiers.$inferSelect): BankDossierRecord {
   return {

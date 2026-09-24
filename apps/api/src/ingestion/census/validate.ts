@@ -1,4 +1,4 @@
-import type { CensusAmenity, RawCensusRecord, RowValidationError, ValidCensusRow } from './types'
+import type { CensusAmenity, RawCensusRecord, RowValidationError, ValidCensusRow } from './types.js'
 
 export interface ValidationOutcome {
   valid: ValidCensusRow[]

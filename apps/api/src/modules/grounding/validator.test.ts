@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAllowedNumbers, extractNumericTokens, validateNarration } from './validator'
+import { buildAllowedNumbers, extractNumericTokens, validateNarration } from './validator.js'
 
 describe('extractNumericTokens', () => {
   it('extracts ₹ figures, comma-grouped and plain, percents, and decimals', () => {

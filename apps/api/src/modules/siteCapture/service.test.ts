@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createSiteCapture, getSiteCapturesForReport, ValidationError, ForbiddenError, MAX_PHOTO_DATA_URL_LENGTH } from './service'
-import type { SiteCaptureDeps } from './service'
-import type { SiteCapture } from './types'
+import { createSiteCapture, getSiteCapturesForReport, ValidationError, ForbiddenError, MAX_PHOTO_DATA_URL_LENGTH } from './service.js'
+import type { SiteCaptureDeps } from './service.js'
+import type { SiteCapture } from './types.js'
 
 const validBody = {
   reportId: null,

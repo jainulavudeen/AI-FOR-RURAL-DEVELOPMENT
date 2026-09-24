@@ -1,12 +1,12 @@
-import '../../config/loadEnv'
+import '../../config/loadEnv.js'
 import { existsSync } from 'node:fs'
 import { sql } from 'drizzle-orm'
-import { db } from '../../db/client'
-import { blocks, districts } from '../../db/schema'
-import { recordDatasetVersion } from '../datasetVersions'
-import { loadAdminHierarchy, type LoadDeps } from './load'
-import { parseAdminHierarchy } from './parse'
-import type { BlockRow, DistrictRow } from './types'
+import { db } from '../../db/client.js'
+import { blocks, districts } from '../../db/schema/index.js'
+import { recordDatasetVersion } from '../datasetVersions.js'
+import { loadAdminHierarchy, type LoadDeps } from './load.js'
+import { parseAdminHierarchy } from './parse.js'
+import type { BlockRow, DistrictRow } from './types.js'
 
 const DATA_DIR = new URL('../../../data/ingestion', import.meta.url).pathname
 const BATCH_SIZE = 500 // keeps each INSERT's parameter count well under Postgres's limit

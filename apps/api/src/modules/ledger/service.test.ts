@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getLedgerSummary, listTransactions, recordTransaction, ValidationError } from './service'
-import type { LedgerDeps } from './service'
-import type { LedgerTransactionRecord } from './types'
+import { getLedgerSummary, listTransactions, recordTransaction, ValidationError } from './service.js'
+import type { LedgerDeps } from './service.js'
+import type { LedgerTransactionRecord } from './types.js'
 
 const validBody = {
   type: 'sale' as const,

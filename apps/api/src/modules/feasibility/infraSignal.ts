@@ -1,7 +1,7 @@
 import { eq, inArray } from 'drizzle-orm'
-import type { Db } from '../../db/client'
-import { blocks, datasetVersions, villageAmenities, villages } from '../../db/schema'
-import type { DataBackedFactor } from './types'
+import type { Db } from '../../db/client.js'
+import { blocks, datasetVersions, villageAmenities, villages } from '../../db/schema/index.js'
+import type { DataBackedFactor } from './types.js'
 
 const NEUTRAL: DataBackedFactor = { value: 0, label: 'neutral', asOf: null, datasetVersionId: null }
 const INFRA_RANGE = 12 // -6..6, matching the old seeded infraFactor range

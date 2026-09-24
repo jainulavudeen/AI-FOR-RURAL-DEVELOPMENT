@@ -1,6 +1,6 @@
 import Fastify from 'fastify'
 import { describe, it, expect } from 'vitest'
-import corsPlugin from './cors'
+import corsPlugin from './cors.js'
 
 // Regression coverage for: "Partner Dashboard edits don't save — any
 // change shows 'Couldn't save, please try again'." Root cause was

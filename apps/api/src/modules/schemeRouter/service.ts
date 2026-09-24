@@ -4,8 +4,8 @@
 // module reads the versioned scheme_rules DB table instead so routing
 // reflects the rule set in force when a report is generated. Not wired yet.
 import { and, desc, eq, isNull } from 'drizzle-orm'
-import type { Db } from '../../db/client'
-import { schemeRules } from '../../db/schema'
+import type { Db } from '../../db/client.js'
+import { schemeRules } from '../../db/schema/index.js'
 
 export interface SchemeRuleVersion {
   id: string

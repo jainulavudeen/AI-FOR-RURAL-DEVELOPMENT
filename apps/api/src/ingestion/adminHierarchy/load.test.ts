@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { loadAdminHierarchy, type LoadDeps } from './load'
-import type { DistrictRow, ParsedAdminHierarchy } from './types'
+import { loadAdminHierarchy, type LoadDeps } from './load.js'
+import type { DistrictRow, ParsedAdminHierarchy } from './types.js'
 
 const sample: ParsedAdminHierarchy = {
   states: [{ code: '11-09', stateCode: 'uttar_pradesh', stateName: 'Uttar Pradesh' }],

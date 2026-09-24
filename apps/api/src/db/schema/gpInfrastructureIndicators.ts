@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, integer, numeric, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { villages } from './villages'
-import { datasetVersions } from './datasetVersions'
+import { villages } from './villages.js'
+import { datasetVersions } from './datasetVersions.js'
 
 // Mission Antyodaya — 21 sectors x many indicators, mixed value types
 // (numeric, boolean-as-text, categorical), so indicatorValue stays text

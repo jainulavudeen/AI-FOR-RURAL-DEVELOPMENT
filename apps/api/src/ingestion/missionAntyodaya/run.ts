@@ -1,13 +1,13 @@
-import '../../config/loadEnv'
+import '../../config/loadEnv.js'
 import { existsSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
-import { db } from '../../db/client'
-import { blocks, districts, gpInfrastructureIndicators, villages } from '../../db/schema'
-import { recordDatasetVersion } from '../datasetVersions'
-import { loadFacilityRows, type LoadDeps } from './load'
-import { parseFacilityFile } from './parse'
-import { validateRows } from './validate'
-import type { RawFacilityRecord } from './types'
+import { db } from '../../db/client.js'
+import { blocks, districts, gpInfrastructureIndicators, villages } from '../../db/schema/index.js'
+import { recordDatasetVersion } from '../datasetVersions.js'
+import { loadFacilityRows, type LoadDeps } from './load.js'
+import { parseFacilityFile } from './parse.js'
+import { validateRows } from './validate.js'
+import type { RawFacilityRecord } from './types.js'
 
 const DATA_DIR = new URL('../../../data/ingestion/mission-antyodaya', import.meta.url).pathname
 

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { parse } from 'csv-parse/sync'
-import type { RawShgRow } from './types'
+import type { RawShgRow } from './types.js'
 
 export interface ParsedRow {
   rowNumber: number

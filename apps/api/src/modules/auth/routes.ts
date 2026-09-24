@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { env } from '../../config/env'
-import { applicants } from '../../db/schema'
-import { logout, refreshSession, requestOtp, verifyOtp, type Applicant, type AuthDeps } from './service'
-import { createSmsProvider } from './smsProvider'
-import type { LogoutBody, OtpRequestBody, OtpVerifyBody, RefreshBody } from './types'
+import { env } from '../../config/env.js'
+import { applicants } from '../../db/schema/index.js'
+import { logout, refreshSession, requestOtp, verifyOtp, type Applicant, type AuthDeps } from './service.js'
+import { createSmsProvider } from './smsProvider.js'
+import type { LogoutBody, OtpRequestBody, OtpVerifyBody, RefreshBody } from './types.js'
 
 function rowToApplicant(row: { id: string; phone: string; role: string }): Applicant {
   return { id: row.id, phone: row.phone, role: row.role }

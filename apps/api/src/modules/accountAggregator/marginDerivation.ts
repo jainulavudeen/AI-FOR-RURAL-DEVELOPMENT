@@ -1,4 +1,4 @@
-import type { FinancialTransaction } from './types'
+import type { FinancialTransaction } from './types.js'
 
 export interface MarginDerivationResult {
   estimatedMarginCapital: number

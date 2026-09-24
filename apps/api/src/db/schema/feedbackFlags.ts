@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { check, index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
+import { applicants } from './applicants.js'
 
 // A dispute linked to the specific source dataset + row, not just free text.
 // `sourceTable`/`sourceRowId` are a deliberately polymorphic reference —

@@ -1,6 +1,6 @@
-import { deriveMarginCapital } from './marginDerivation'
-import type { AccountAggregatorProvider } from './provider'
-import type { ConsentRecord, ConsentScope, ConsentStatus, FetchDataBody } from './types'
+import { deriveMarginCapital } from './marginDerivation.js'
+import type { AccountAggregatorProvider } from './provider.js'
+import type { ConsentRecord, ConsentScope, ConsentStatus, FetchDataBody } from './types.js'
 
 export class ForbiddenError extends Error {
   statusCode = 403

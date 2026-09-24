@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { applicants, appeals, auditLog, reports } from '../../db/schema'
+import { applicants, appeals, auditLog, reports } from '../../db/schema/index.js'
 import {
   getAppeals,
   getAuditLog,
@@ -9,8 +9,8 @@ import {
   reassignAppeal,
   type AdminDeps,
   type AppealStatRow,
-} from './service'
-import type { AppealFilters, AuditLogFilters, ReassignAppealBody, ReportFilters } from './types'
+} from './service.js'
+import type { AppealFilters, AuditLogFilters, ReassignAppealBody, ReportFilters } from './types.js'
 
 // Admin Portal — oversight only, server-enforced (CLAUDE.md item 6): every
 // handler below passes request.user.role straight into the service layer,

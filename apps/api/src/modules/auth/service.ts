@@ -1,14 +1,14 @@
-import type { RedisLike } from '../../lib/redis/types'
-import { checkAndIncrement, checkCooldown } from '../../lib/rateLimit'
-import { generateOtpCode, hashOtpCode, otpKeys, verifyOtpCode } from './otp'
-import type { SmsProvider } from './smsProvider'
+import type { RedisLike } from '../../lib/redis/types.js'
+import { checkAndIncrement, checkCooldown } from '../../lib/rateLimit.js'
+import { generateOtpCode, hashOtpCode, otpKeys, verifyOtpCode } from './otp.js'
+import type { SmsProvider } from './smsProvider.js'
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   consumeRefreshToken,
   issueRefreshToken,
   revokeRefreshToken,
   signAccessToken,
-} from './tokens'
+} from './tokens.js'
 
 // Rate limits — see the plan for rationale on each number.
 const RESEND_COOLDOWN_SECONDS = 60

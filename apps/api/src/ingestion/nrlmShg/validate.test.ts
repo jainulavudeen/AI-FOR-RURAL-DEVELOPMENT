@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { ParsedRow } from './parse'
-import { validateRows } from './validate'
+import type { ParsedRow } from './parse.js'
+import { validateRows } from './validate.js'
 
 function row(overrides: Partial<ParsedRow['raw']>): ParsedRow {
   return {

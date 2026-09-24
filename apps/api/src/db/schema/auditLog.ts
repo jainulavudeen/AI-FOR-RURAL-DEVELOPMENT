@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
+import { applicants } from './applicants.js'
 
 // A genuine, append-only "who did what, when" trail backing the Admin
 // Portal's audit log view (CLAUDE.md item 6). Every officer/admin action

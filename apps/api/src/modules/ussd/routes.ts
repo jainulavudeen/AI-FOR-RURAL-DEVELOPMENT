@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { processUssdTurn } from './service'
+import { processUssdTurn } from './service.js'
 
 // One HTTP endpoint a real USSD aggregator's webhook would call per screen
 // turn. This is deliberately a generic {sessionId, phoneNumber, input} JSON

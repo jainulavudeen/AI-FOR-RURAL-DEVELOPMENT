@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { deriveMarginCapital } from './marginDerivation'
-import type { FinancialTransaction } from './types'
+import { deriveMarginCapital } from './marginDerivation.js'
+import type { FinancialTransaction } from './types.js'
 
 describe('deriveMarginCapital', () => {
   it('averages monthly net surplus across the months present', () => {

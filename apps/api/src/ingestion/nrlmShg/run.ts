@@ -1,12 +1,12 @@
-import '../../config/loadEnv'
+import '../../config/loadEnv.js'
 import { existsSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
-import { db } from '../../db/client'
-import { blocks, districts, shgRegistry } from '../../db/schema'
-import { recordDatasetVersion } from '../datasetVersions'
-import { loadShgRows, type LoadDeps } from './load'
-import { parseShgFile } from './parse'
-import { validateRows } from './validate'
+import { db } from '../../db/client.js'
+import { blocks, districts, shgRegistry } from '../../db/schema/index.js'
+import { recordDatasetVersion } from '../datasetVersions.js'
+import { loadShgRows, type LoadDeps } from './load.js'
+import { parseShgFile } from './parse.js'
+import { validateRows } from './validate.js'
 
 const DEFAULT_FILE = new URL('../../../data/ingestion/nrlm-shg/madurai.csv', import.meta.url).pathname
 

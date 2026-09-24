@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canApplicantEscalate, isSlaBreached, isTerminal, SLA_BREACH_HOURS } from './escalation'
+import { canApplicantEscalate, isSlaBreached, isTerminal, SLA_BREACH_HOURS } from './escalation.js'
 
 describe('isSlaBreached', () => {
   it('is false for a freshly created appeal', () => {

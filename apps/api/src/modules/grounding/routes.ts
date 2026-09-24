@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { query } from './service'
-import type { QueryRequestBody } from './types'
+import { query } from './service.js'
+import type { QueryRequestBody } from './types.js'
 
 const groundingRoutes: FastifyPluginAsync = async (fastify) => {
   // Unauthenticated/informational, same class as feasibility's GETs — never

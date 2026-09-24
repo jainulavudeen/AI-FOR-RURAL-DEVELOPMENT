@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backfillDigipins } from './backfill'
+import { backfillDigipins } from './backfill.js'
 
 describe('backfillDigipins', () => {
   it('computes and writes a digipin for every candidate village', async () => {

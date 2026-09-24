@@ -1,11 +1,11 @@
 import { eq, inArray, sql } from 'drizzle-orm'
 import { getMatchingSocialSchemes } from '@setu/core'
-import type { Db } from '../../db/client'
-import { schemeDocumentChunks, schemeDocuments } from '../../db/schema'
-import type { EmbeddingProvider } from '../../llm/embeddingProvider'
-import { toVectorLiteral } from '../../llm/embeddingProvider'
-import { withTimeout } from '../../lib/withTimeout'
-import type { GroundedClaim, QueryRequestBody } from './types'
+import type { Db } from '../../db/client.js'
+import { schemeDocumentChunks, schemeDocuments } from '../../db/schema/index.js'
+import type { EmbeddingProvider } from '../../llm/embeddingProvider.js'
+import { toVectorLiteral } from '../../llm/embeddingProvider.js'
+import { withTimeout } from '../../lib/withTimeout.js'
+import type { GroundedClaim, QueryRequestBody } from './types.js'
 
 const TOP_K = 4
 const EMBEDDING_TIMEOUT_MS = 2500

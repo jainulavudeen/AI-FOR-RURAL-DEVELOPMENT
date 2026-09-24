@@ -1,4 +1,4 @@
-import type { GroundedClaim, Locale, NarrationInput } from './types'
+import type { GroundedClaim, Locale, NarrationInput } from './types.js'
 
 export interface FeasibilityEstimateContext {
   businessLabel: string

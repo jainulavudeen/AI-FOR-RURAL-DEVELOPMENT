@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { NotFoundError, notifySchemeChange, sendNotification, type NotificationDeps } from './service'
-import type { SchemeRuleSnapshot } from './schemeChangeDiff'
-import type { NotificationProvider } from './types'
+import { NotFoundError, notifySchemeChange, sendNotification, type NotificationDeps } from './service.js'
+import type { SchemeRuleSnapshot } from './schemeChangeDiff.js'
+import type { NotificationProvider } from './types.js'
 
 function makeProvider(): NotificationProvider {
   return { send: vi.fn(async () => undefined) }

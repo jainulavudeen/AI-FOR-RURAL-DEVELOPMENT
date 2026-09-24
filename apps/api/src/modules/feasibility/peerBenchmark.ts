@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
-import type { Db } from '../../db/client'
-import { reports } from '../../db/schema'
+import type { Db } from '../../db/client.js'
+import { reports } from '../../db/schema/index.js'
 
 // k-anonymity threshold: a benchmark bucket (businessId x districtId x
 // verdictKey) is shown only when it contains outcomes from at least this

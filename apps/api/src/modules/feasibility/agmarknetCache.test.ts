@@ -1,7 +1,7 @@
-import { createFakeRedis } from '../../testUtils/fakeRedis'
+import { createFakeRedis } from '../../testUtils/fakeRedis.js'
 import { describe, expect, it, vi } from 'vitest'
-import { getCachedDistrictActivity } from './agmarknetCache'
-import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
+import { getCachedDistrictActivity } from './agmarknetCache.js'
+import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider.js'
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))

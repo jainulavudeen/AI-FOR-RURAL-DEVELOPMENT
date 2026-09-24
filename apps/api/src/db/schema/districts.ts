@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { geometry } from './customTypes'
+import { geometry } from './customTypes.js'
 
 export const districts = pgTable(
   'districts',

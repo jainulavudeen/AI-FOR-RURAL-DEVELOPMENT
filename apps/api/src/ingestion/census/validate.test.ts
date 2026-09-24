@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { RawCensusRecord } from './types'
-import { validateRows } from './validate'
+import type { RawCensusRecord } from './types.js'
+import { validateRows } from './validate.js'
 
 // Field values below match what was actually observed in Madurai rows of
 // pc11_vd_clean_shrid.csv (not invented): "1.0"/"0.0" presence strings,

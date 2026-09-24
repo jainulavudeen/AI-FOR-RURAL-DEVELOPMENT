@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { loadCensusRows, type LoadDeps } from './load'
-import type { ValidCensusRow } from './types'
+import { loadCensusRows, type LoadDeps } from './load.js'
+import type { ValidCensusRow } from './types.js'
 
 function makeFakeDb() {
   const blocksByName = new Map<string, string>()

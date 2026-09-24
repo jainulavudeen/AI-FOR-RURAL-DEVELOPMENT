@@ -1,4 +1,4 @@
-import type { RedisLike } from '../lib/redis/types'
+import type { RedisLike } from '../lib/redis/types.js'
 
 // Hand-rolled in-memory stand-in for a real Redis, used only in tests.
 // Replaces ioredis-mock (dropped once the app stopped depending on ioredis

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { parse as parseSync } from 'csv-parse/sync'
-import { slugify, titleCase } from './slug'
-import type { BlockRow, DistrictRow, ParsedAdminHierarchy, StateRow } from './types'
+import { slugify, titleCase } from './slug.js'
+import type { BlockRow, DistrictRow, ParsedAdminHierarchy, StateRow } from './types.js'
 
 // shrid_loc_names.csv is SHRUG's (devdatalab.org/shrug_download) real
 // redistribution of India's Census 2011 administrative hierarchy —

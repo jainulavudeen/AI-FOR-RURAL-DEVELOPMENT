@@ -1,5 +1,5 @@
-import { isMaterialSchemeChange, describeSchemeChange, type SchemeRuleSnapshot } from './schemeChangeDiff'
-import type { NotificationChannel, NotificationProvider } from './types'
+import { isMaterialSchemeChange, describeSchemeChange, type SchemeRuleSnapshot } from './schemeChangeDiff.js'
+import type { NotificationChannel, NotificationProvider } from './types.js'
 
 export class NotFoundError extends Error {
   statusCode = 404

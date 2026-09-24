@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { geometry } from './customTypes'
-import { blocks } from './blocks'
+import { geometry } from './customTypes.js'
+import { blocks } from './blocks.js'
 
 // One level finer than blocks — Census/Mission Antyodaya are village/GP
 // grain. digipin/geom stay nullable until a real coordinate source exists

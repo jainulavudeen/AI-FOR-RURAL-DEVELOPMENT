@@ -1,4 +1,4 @@
-import type { ValidCensusRow } from './types'
+import type { ValidCensusRow } from './types.js'
 
 export interface UpsertVillageInput {
   blockId: string

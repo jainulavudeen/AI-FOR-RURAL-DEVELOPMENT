@@ -10,8 +10,8 @@ import {
   ValidationError,
   type AdminDeps,
   type AppealStatRow,
-} from './service'
-import type { AdminAppealListItem } from './types'
+} from './service.js'
+import type { AdminAppealListItem } from './types.js'
 
 function makeDeps(overrides: Partial<AdminDeps> = {}): AdminDeps {
   return {

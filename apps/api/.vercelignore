@@ -1,0 +1,9 @@
+# CLI `vercel deploy` uploads the whole local directory regardless of
+# .gitignore — this file exists so it doesn't also upload the ~1.1GB of
+# real, gitignored government source data (see repo-root .gitignore) that
+# has no business in a deployed function bundle. Only ever needed locally
+# to run `npm run ingest:*` scripts, never at request time.
+data/
+node_modules/
+dist/
+*.log

@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { doublePrecision, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { applicants } from './applicants'
-import { reports } from './reports'
+import { applicants } from './applicants.js'
+import { reports } from './reports.js'
 
 // Geotagged site-capture evidence (camera photo + DIGIPIN pin) for a
 // proposed business site — turns "hyper-local" into something a bank or

@@ -1,12 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify'
-import { DigipinOutOfBoundsError, encodeDigipin } from '../../ingestion/digipin/algorithm'
-import { estimateFeasibilityFactors, narrateReport } from '../grounding/service'
-import { createAgmarknetProvider } from './agmarknetProvider'
-import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache'
-import { createGeocodingProvider } from './geocodingProvider'
-import { getPeerBenchmark } from './peerBenchmark'
-import { assembleFeasibilityScore, getInformalLendingRate, getLocalDemandSignal } from './service'
-import type { ScoreRequestBody } from './types'
+import { DigipinOutOfBoundsError, encodeDigipin } from '../../ingestion/digipin/algorithm.js'
+import { estimateFeasibilityFactors, narrateReport } from '../grounding/service.js'
+import { createAgmarknetProvider } from './agmarknetProvider.js'
+import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache.js'
+import { createGeocodingProvider } from './geocodingProvider.js'
+import { getPeerBenchmark } from './peerBenchmark.js'
+import { assembleFeasibilityScore, getInformalLendingRate, getLocalDemandSignal } from './service.js'
+import type { ScoreRequestBody } from './types.js'
 
 // Cache lifetimes mirror each signal's own real freshness window (not
 // arbitrary) — see districtBlockCache.ts and agmarknetCache.ts for the

@@ -1,6 +1,6 @@
-import { createFakeRedis } from '../testUtils/fakeRedis'
+import { createFakeRedis } from '../testUtils/fakeRedis.js'
 import { describe, expect, it } from 'vitest'
-import { checkAndIncrement, checkCooldown } from './rateLimit'
+import { checkAndIncrement, checkCooldown } from './rateLimit.js'
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))

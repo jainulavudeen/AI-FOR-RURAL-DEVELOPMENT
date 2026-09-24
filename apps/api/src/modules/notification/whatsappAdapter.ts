@@ -1,4 +1,4 @@
-import type { NotificationProvider } from './types'
+import type { NotificationProvider } from './types.js'
 
 // WhatsApp Business API is real regulated infrastructure — a Meta
 // Business/BSP (Business Solution Provider) partnership and template

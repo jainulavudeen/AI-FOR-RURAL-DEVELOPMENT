@@ -1,18 +1,18 @@
 // Retrieval + narration. THE ONLY MODULE PERMITTED TO CALL AN LLM
 // (CLAUDE.md, non-negotiable boundary rule 2). No other module in this app
 // may import ../../llm/client — that import is the enforcement point.
-import type { RedisLike } from '../../lib/redis/types'
-import type { Db } from '../../db/client'
-import { env } from '../../config/env'
-import { sha256Hex, stableStringify } from '../../lib/hash'
-import { withTimeout } from '../../lib/withTimeout'
-import { createLlmProvider, type LlmProvider, type LlmTier } from '../../llm/client'
-import { createEmbeddingProvider, type EmbeddingProvider } from '../../llm/embeddingProvider'
-import { buildFallbackAnswer, buildFallbackNarration } from './fallbackTemplates'
-import { buildFeasibilityEstimatePrompt, buildQueryPrompt, buildNarrationPrompt, type FeasibilityEstimateContext } from './promptBuilder'
-import { retrieveGroundedClaims } from './retrieval'
-import type { FeasibilityEstimate, GroundedClaim, Locale, NarrationInput, NarrationResult, QueryRequestBody, QueryResult } from './types'
-import { buildAllowedNumbers, validateNarration } from './validator'
+import type { RedisLike } from '../../lib/redis/types.js'
+import type { Db } from '../../db/client.js'
+import { env } from '../../config/env.js'
+import { sha256Hex, stableStringify } from '../../lib/hash.js'
+import { withTimeout } from '../../lib/withTimeout.js'
+import { createLlmProvider, type LlmProvider, type LlmTier } from '../../llm/client.js'
+import { createEmbeddingProvider, type EmbeddingProvider } from '../../llm/embeddingProvider.js'
+import { buildFallbackAnswer, buildFallbackNarration } from './fallbackTemplates.js'
+import { buildFeasibilityEstimatePrompt, buildQueryPrompt, buildNarrationPrompt, type FeasibilityEstimateContext } from './promptBuilder.js'
+import { retrieveGroundedClaims } from './retrieval.js'
+import type { FeasibilityEstimate, GroundedClaim, Locale, NarrationInput, NarrationResult, QueryRequestBody, QueryResult } from './types.js'
+import { buildAllowedNumbers, validateNarration } from './validator.js'
 
 const NARRATION_CACHE_TTL_SECONDS = 24 * 60 * 60 // fast tier — the common case, refreshed daily
 const STRONG_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60 // "cached hard" — rare, expensive strong-tier answers

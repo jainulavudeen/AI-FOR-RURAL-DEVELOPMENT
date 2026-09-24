@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { uploadBankStatement, ValidationError, MAX_FILE_SIZE_BYTES } from './service'
-import type { BankStatementDeps } from './service'
+import { uploadBankStatement, ValidationError, MAX_FILE_SIZE_BYTES } from './service.js'
+import type { BankStatementDeps } from './service.js'
 
 const GOOD_TEXT = '01/04/2026 UPI-KIRANA STORE 500.00 DR 45,230.50\n02/04/2026 Salary Credit 25000.00 CR 70,230.50'
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { RawFacilityRecord } from './types'
-import { validateRows } from './validate'
+import type { RawFacilityRecord } from './types.js'
+import { validateRows } from './validate.js'
 
 // Field values below match a real Madurai-adjacent row observed in
 // village-basic-facilities.csv (Tamil Nadu, Alanganallur block).

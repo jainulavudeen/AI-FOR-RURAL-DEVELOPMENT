@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs'
 import { parse as parseStream } from 'csv-parse'
-import type { RawFacilityRecord } from './types'
+import type { RawFacilityRecord } from './types.js'
 
 // Both source files share this key-column shape; everything else in the
 // header is an indicator column, whatever it's named — not a hardcoded

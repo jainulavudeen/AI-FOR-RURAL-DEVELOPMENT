@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { blocks, shgRegistry } from '../../db/schema'
-import { getShgSignal } from './shgSignal'
+import { blocks, shgRegistry } from '../../db/schema/index.js'
+import { getShgSignal } from './shgSignal.js'
 
 // Discriminates by table reference (same technique as infraSignal.test.ts).
 // getShgSignal's block-then-district fallback can issue TWO separate

@@ -3,7 +3,7 @@
 // the LLM narrates and explains only, it never computes; nothing that
 // touches this client ever produces a rupee figure a user sees).
 import Anthropic from '@anthropic-ai/sdk'
-import { env } from '../config/env'
+import { env } from '../config/env.js'
 
 export type LlmTier = 'fast' | 'strong'
 

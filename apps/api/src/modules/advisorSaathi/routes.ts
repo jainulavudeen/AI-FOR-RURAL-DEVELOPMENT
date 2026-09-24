@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
-import { ledgerTransactions } from '../../db/schema'
-import { chat, type AdvisorSaathiDeps } from './service'
-import type { ChatRequestBody, ChatResult } from './types'
+import { ledgerTransactions } from '../../db/schema/index.js'
+import { chat, type AdvisorSaathiDeps } from './service.js'
+import type { ChatRequestBody, ChatResult } from './types.js'
 
 // Auth-gated (grounding itself in an applicant's own private ledger data —
 // squarely a "saving"-adjacent action, unlike grounding/query's public,

@@ -1,6 +1,6 @@
-import { createFakeRedis } from '../../testUtils/fakeRedis'
+import { createFakeRedis } from '../../testUtils/fakeRedis.js'
 import { describe, expect, it, vi } from 'vitest'
-import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache'
+import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache.js'
 
 function makeDb(rows: { id: string }[]) {
   return {

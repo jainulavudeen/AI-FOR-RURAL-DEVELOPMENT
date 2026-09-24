@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { reports, siteCaptures } from '../../db/schema'
-import { createSiteCapture, getSiteCapturesForReport, type SiteCaptureDeps } from './service'
-import type { CreateSiteCaptureBody, SiteCapture } from './types'
+import { reports, siteCaptures } from '../../db/schema/index.js'
+import { createSiteCapture, getSiteCapturesForReport, type SiteCaptureDeps } from './service.js'
+import type { CreateSiteCaptureBody, SiteCapture } from './types.js'
 
 function rowToSiteCapture(row: typeof siteCaptures.$inferSelect): SiteCapture {
   return {
