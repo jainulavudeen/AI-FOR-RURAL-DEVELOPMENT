@@ -55,6 +55,7 @@ function makeDeps(overrides: Partial<FeedbackDeps> = {}): FeedbackDeps {
     getApplicantPhone: async () => '+919999900002',
     cpgrams: makeMockCpgrams(),
     getReportById: async () => null,
+    insertAuditLogEntry: vi.fn(async () => {}),
     ...overrides,
   }
 }
@@ -189,6 +190,11 @@ describe('updateAppealStatus', () => {
     await expect(updateAppealStatus(deps, 'applicant', 'officer-1', 'appeal-1', { status: 'resolved' })).rejects.toThrow(
       ForbiddenError
     )
+  })
+
+  it('rejects an admin token too — oversight only, admins never resolve appeals themselves (CLAUDE.md item 6)', async () => {
+    const deps = makeDeps()
+    await expect(updateAppealStatus(deps, 'admin', 'admin-1', 'appeal-1', { status: 'resolved' })).rejects.toThrow(ForbiddenError)
   })
 
   it("rejects an officer updating another officer's assigned appeal", async () => {

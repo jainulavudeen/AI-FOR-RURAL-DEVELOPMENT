@@ -6,9 +6,13 @@ import { db } from './client'
 import { applicants, appeals, blocks, businessTypes, districts, informalLendingRates, reports, schemeRules } from './schema'
 import { K_ANONYMITY_THRESHOLD } from '../modules/feasibility/peerBenchmark'
 
-// Fixed demo phone number — sign in via the normal OTP flow (console
-// adapter logs the code) to see the Partner Dashboard's officer queue.
+// Fixed demo phone numbers — sign in via the normal OTP flow (console
+// adapter logs the code) to see the Partner Dashboard's officer queue, or
+// the Admin Portal's oversight views. Same posture as the officer role:
+// no self-service promotion exists, only this seed row or a direct DB
+// write (CLAUDE.md Known Gaps).
 const DEMO_OFFICER_PHONE = '+919999900001'
+const DEMO_ADMIN_PHONE = '+919999900009'
 
 // Five applicant profiles chosen to exercise both schemes and all four
 // score bands in one seed run — real demo material, not filler. Every
@@ -87,6 +91,11 @@ export async function seedDemoData(db: Db) {
     .values({ phone: DEMO_OFFICER_PHONE, role: 'officer', phoneVerifiedAt: now })
     .onConflictDoNothing({ target: applicants.phone })
     .returning({ id: applicants.id })
+
+  await db
+    .insert(applicants)
+    .values({ phone: DEMO_ADMIN_PHONE, role: 'admin', phoneVerifiedAt: now })
+    .onConflictDoNothing({ target: applicants.phone })
 
   // Five demo applicant profiles — see DEMO_PROFILES above for why these
   // particular five. Each one's finance figures come straight out of
@@ -262,7 +271,7 @@ export async function seedDemoData(db: Db) {
   }
 
   console.log(
-    `Seeded Madurai pilot district (3 blocks) + scheme_rules v1 (micro_finance, term_loan) + ${BUSINESS_TYPE_CATALOGUE.length} business types + demo officer (${DEMO_OFFICER_PHONE}) + informal-lending-rate regional fallback + ${K_ANONYMITY_THRESHOLD + 1} synthetic peer-benchmark reports + ${DEMO_PROFILES.length} demo applicant profiles (dairy/retail/textiles/poultry/manufacturing, both schemes, all four score bands)`
+    `Seeded Madurai pilot district (3 blocks) + scheme_rules v1 (micro_finance, term_loan) + ${BUSINESS_TYPE_CATALOGUE.length} business types + demo officer (${DEMO_OFFICER_PHONE}) + demo admin (${DEMO_ADMIN_PHONE}) + informal-lending-rate regional fallback + ${K_ANONYMITY_THRESHOLD + 1} synthetic peer-benchmark reports + ${DEMO_PROFILES.length} demo applicant profiles (dairy/retail/textiles/poultry/manufacturing, both schemes, all four score bands)`
   )
 }
 

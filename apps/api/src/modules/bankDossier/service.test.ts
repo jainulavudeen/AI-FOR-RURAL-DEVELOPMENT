@@ -37,6 +37,7 @@ function makeDeps(overrides: Partial<BankDossierDeps> = {}): BankDossierDeps {
     ),
     getApprovalsByDossierId: vi.fn(async () => []),
     getApprovalByHash: vi.fn(async () => null),
+    insertAuditLogEntry: vi.fn(async () => {}),
     ...overrides,
   }
 }
@@ -106,6 +107,13 @@ describe('approveDossier', () => {
     const deps = makeDeps({ getDossierById: vi.fn(async () => existingDossier) })
     await expect(
       approveDossier(deps, 'applicant-1', 'applicant', 'd1', { officerName: 'A', officerDesignation: 'B' })
+    ).rejects.toThrow(ForbiddenError)
+  })
+
+  it('refuses an admin token — oversight only, admins never approve dossiers themselves (CLAUDE.md item 6)', async () => {
+    const deps = makeDeps({ getDossierById: vi.fn(async () => existingDossier) })
+    await expect(
+      approveDossier(deps, 'admin-1', 'admin', 'd1', { officerName: 'A', officerDesignation: 'B' })
     ).rejects.toThrow(ForbiddenError)
   })
 

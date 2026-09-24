@@ -1,6 +1,6 @@
 import { desc, eq, notInArray, sql } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { applicants, appeals, feedbackFlags, reports } from '../../db/schema'
+import { applicants, appeals, auditLog, feedbackFlags, reports } from '../../db/schema'
 import { getCurrentSchemeRuleVersion } from '../schemeRouter/service'
 import { createCpgramsAdapter } from './cpgramsAdapter'
 import type { EscalationReason } from './escalation'
@@ -176,6 +176,9 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
         dataVintage: row.dataVintage as Record<string, unknown>,
         createdAt: row.createdAt,
       }
+    },
+    insertAuditLogEntry: async (input) => {
+      await fastify.db.insert(auditLog).values(input)
     },
   }
 

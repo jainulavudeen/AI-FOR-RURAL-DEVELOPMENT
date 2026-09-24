@@ -29,6 +29,7 @@ const Compare = lazy(() => import('./pages/Compare'))
 const SchemeComparison = lazy(() => import('./pages/SchemeComparison'))
 const Architecture = lazy(() => import('./pages/Architecture'))
 const OfficerDashboard = lazy(() => import('./pages/OfficerDashboard'))
+const AdminPortal = lazy(() => import('./pages/AdminPortal'))
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -48,6 +49,7 @@ function AnimatedRoutes() {
         <Route path="/schemes" element={<PageTransition><SchemeComparison /></PageTransition>} />
         <Route path="/architecture" element={<PageTransition><Architecture /></PageTransition>} />
         <Route path="/partners" element={<PageTransition><OfficerDashboard /></PageTransition>} />
+        <Route path="/admin" element={<PageTransition><AdminPortal /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   )

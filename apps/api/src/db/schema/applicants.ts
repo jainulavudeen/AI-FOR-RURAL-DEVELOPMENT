@@ -4,7 +4,10 @@ import { boolean, check, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-o
 // Phone-verified identity. No email column — rural first-time applicants
 // often share a family phone and rarely check email (see CLAUDE.md target
 // user). `role` is a minimal forward-looking field so appeals.assigned_officer_id
-// has something to point at — full auth/RBAC is a later prompt, not this one.
+// has something to point at. 'admin' (oversight role, above officer — see
+// modules/admin/) was added later; same posture as 'officer': no
+// self-service promotion flow exists, only a direct DB write or the
+// seeded demo row.
 //
 // aa_consent_* is Account Aggregator opt-in state — separate from
 // consent_data_use/consent_marketing above (a different regulatory basis:
@@ -32,7 +35,7 @@ export const applicants = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    check('applicants_role_check', sql`${table.role} in ('applicant', 'officer')`),
+    check('applicants_role_check', sql`${table.role} in ('applicant', 'officer', 'admin')`),
     check(
       'applicants_aa_consent_status_check',
       sql`${table.aaConsentStatus} is null or ${table.aaConsentStatus} in ('not_requested', 'pending', 'active', 'rejected', 'revoked', 'expired')`

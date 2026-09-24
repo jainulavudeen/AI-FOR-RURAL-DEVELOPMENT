@@ -5,6 +5,7 @@
 // same pattern as modules/auth/service.ts.
 import type { CpgramsAdapter } from './cpgramsAdapter'
 import { canApplicantEscalate, isSlaBreached, type EscalationReason } from './escalation'
+import type { AuditLogEntryInput } from '../../lib/auditLog'
 import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types'
 
 export class ForbiddenError extends Error {
@@ -100,6 +101,7 @@ export interface FeedbackDeps {
   getApplicantPhone: (applicantId: string) => Promise<string | null>
   cpgrams: CpgramsAdapter
   getReportById: (reportId: string) => Promise<StoredReport | null>
+  insertAuditLogEntry: (input: AuditLogEntryInput) => Promise<void>
 }
 
 export interface StoredReport {
@@ -220,7 +222,16 @@ export async function updateAppealStatus(
     throw new ForbiddenError('Only the assigned officer may update this appeal')
   }
 
-  return deps.updateAppeal(appealId, body)
+  const updated = await deps.updateAppeal(appealId, body)
+  await deps.insertAuditLogEntry({
+    actorId: officerId,
+    actorRole: officerRole,
+    action: 'appeal_status_update',
+    targetType: 'appeal',
+    targetId: appealId,
+    metadata: { fromStatus: appeal.status, toStatus: body.status },
+  })
+  return updated
 }
 
 // One shared path for both escalation triggers (applicant-initiated and

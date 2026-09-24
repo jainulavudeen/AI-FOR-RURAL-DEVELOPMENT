@@ -121,6 +121,7 @@ export default function Navbar() {
     { to: '/bank-dossier', key: 'nav.bankDossier' },
     { to: '/architecture', key: 'nav.architecture' },
     { to: '/partners', key: 'nav.partners' },
+    { to: '/admin', key: 'nav.admin' },
   ]
   const links = [...primaryLinks, ...moreLinks]
 

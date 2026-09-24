@@ -78,6 +78,13 @@
       "when": 1790237971646,
       "tag": "0010_furry_cable",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790238537124,
+      "tag": "0011_long_inertia",
+      "breakpoints": true
     }
   ]
 }

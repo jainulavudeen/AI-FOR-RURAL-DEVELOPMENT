@@ -1,7 +1,7 @@
 import { desc, eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import type { LedgerPaymentMode, LedgerTransaction, LedgerTransactionSource, LedgerTransactionType } from '@setu/core'
-import { applicants, bankDossierApprovals, bankDossiers, ledgerTransactions } from '../../db/schema'
+import { applicants, auditLog, bankDossierApprovals, bankDossiers, ledgerTransactions } from '../../db/schema'
 import { approveDossier, generateDossier, getDossier, getDossierApprovals, verifyApprovalHash, type BankDossierDeps } from './service'
 import type { ApproveDossierBody, BankDossierRecord, DossierApproval, DossierSnapshot, GenerateDossierBody } from './types'
 
@@ -78,6 +78,9 @@ const bankDossierRoutes: FastifyPluginAsync = async (fastify) => {
     getApprovalByHash: async (hash) => {
       const [row] = await fastify.db.select().from(bankDossierApprovals).where(eq(bankDossierApprovals.signatureHash, hash)).limit(1)
       return row ? rowToApproval(row) : null
+    },
+    insertAuditLogEntry: async (input) => {
+      await fastify.db.insert(auditLog).values(input)
     },
   }
 

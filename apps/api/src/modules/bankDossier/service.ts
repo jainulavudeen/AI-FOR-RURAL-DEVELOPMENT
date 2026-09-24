@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import type { LedgerTransaction } from '@setu/core'
 import { buildFinancialSnapshot } from '../../lib/financialSnapshot'
 import { computeApprovalSignatureHash } from '../../lib/approvalSignature'
+import type { AuditLogEntryInput } from '../../lib/auditLog'
 import type {
   ApproveDossierBody,
   BankDossierRecord,
@@ -55,6 +56,7 @@ export interface BankDossierDeps {
   // header on why re-approval inserts rather than overwrites).
   getApprovalsByDossierId: (dossierId: string) => Promise<DossierApproval[]>
   getApprovalByHash: (hash: string) => Promise<DossierApproval | null>
+  insertAuditLogEntry: (input: AuditLogEntryInput) => Promise<void>
 }
 
 // A short, human-checkable reference — not a cryptographic verification
@@ -140,7 +142,7 @@ export async function approveDossier(
   const approvedAt = new Date()
   const signatureHash = computeApprovalSignatureHash(dossierId, officerId, approvedAt)
 
-  return deps.insertApproval({
+  const approval = await deps.insertApproval({
     dossierId,
     officerId,
     officerName: body.officerName.trim(),
@@ -148,6 +150,15 @@ export async function approveDossier(
     signatureHash,
     approvedAt,
   })
+  await deps.insertAuditLogEntry({
+    actorId: officerId,
+    actorRole: officerRole,
+    action: 'dossier_approval',
+    targetType: 'bank_dossier',
+    targetId: dossierId,
+    metadata: { officerName: approval.officerName, officerDesignation: approval.officerDesignation },
+  })
+  return approval
 }
 
 // The full approval history for one dossier, newest first — an officer or
