@@ -1,5 +1,6 @@
 import {
   computeCreditScore,
+  computeEmi,
   computeMatchScore,
   getEligibleSchemes,
   getLoanSanctionProbabilities,
@@ -8,9 +9,11 @@ import {
   summarizeLedger,
   type CreditScoreResult,
   type EligibleScheme,
+  type EmiResult,
   type LedgerSummary,
   type LedgerTransaction,
   type LoanSanctionProbability,
+  type StructureFinanceResult,
   type UpcomingFestival,
 } from '@setu/core'
 
@@ -47,6 +50,14 @@ export interface FinancialSnapshot {
   topMatches: Array<{ scheme: EligibleScheme; matchScore: number }>
   loanSanctionProbabilities: LoanSanctionProbability[]
   upcomingFestivals: UpcomingFestival[]
+  // The same structureFinance/computeEmi call Results.jsx makes client-side,
+  // against this same margin — @setu/core stays the single source (CLAUDE.md
+  // boundary rule 1), never reimplemented here. Added so advisorSaathi can
+  // ground answers in the applicant's actual loan/EMI figures instead of
+  // only ledger/credit-score data; bankDossier's frozen snapshot picks this
+  // up too, for free, since it already stores this whole object.
+  finance: StructureFinanceResult
+  emi: EmiResult
   asOfDate: string
 }
 
@@ -77,6 +88,12 @@ export function buildFinancialSnapshot(
 
   const loanSanctionProbabilities = getLoanSanctionProbabilities(eligibleSchemes, creditScore.score)
   const upcomingFestivals = getUpcomingFestivals(asOfDate, selection.stateId ?? null, selection.businessId ?? null, 75)
+  const emi = computeEmi({
+    loanAmount: finance.loanAmount,
+    interestRate: finance.scheme.interestRate,
+    tenureYears: finance.scheme.tenureYears,
+    moratoriumMonths: finance.scheme.moratoriumMonths,
+  })
 
   return {
     summary,
@@ -85,6 +102,8 @@ export function buildFinancialSnapshot(
     topMatches,
     loanSanctionProbabilities,
     upcomingFestivals,
+    finance,
+    emi,
     asOfDate: asOfDate.toISOString(),
   }
 }

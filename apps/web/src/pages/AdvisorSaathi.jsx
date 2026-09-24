@@ -3,8 +3,14 @@ import { Sparkles, Send, ChevronDown, WifiOff, FileText } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
-import { askAdvisorSaathi } from '../lib/advisorSaathi'
+import { askAdvisorSaathiStream } from '../lib/advisorSaathi'
 import { formatINR } from '../lib/format'
+
+// How long after the "start" event with no visible progress before the
+// "still working" notice appears (CLAUDE.md rule 4: never a spinner that
+// never resolves — chat() itself is hard-bounded by LLM_TIMEOUT_MS, but
+// the UI shouldn't sit silently for that whole window with no feedback).
+const SLOW_NOTICE_MS = 4500
 
 const SUGGESTION_KEYS = ['advisorSaathi.suggestion1', 'advisorSaathi.suggestion2', 'advisorSaathi.suggestion3']
 
@@ -23,38 +29,77 @@ export default function AdvisorSaathi() {
   const [input, setInput] = useState('')
   const [asking, setAsking] = useState(false)
   const scrollRef = useRef(null)
+  const slowTimerRef = useRef(null)
+  // A plain ref counter, not React state — the streaming callbacks below
+  // can fire synchronously, before a setMessages() updater has actually
+  // run (React doesn't guarantee that runs before the very next line).
+  // Deriving the assistant message's id from a ref (not from reading
+  // messages.length inside the updater and stashing it in a closure
+  // variable) means it's correct immediately, with no dependency on when
+  // React gets around to the update.
+  const nextIdRef = useRef(0)
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages])
 
+  useEffect(() => () => clearTimeout(slowTimerRef.current), [])
+
   const send = async (question) => {
     const trimmed = question.trim()
     if (!trimmed || asking) return
 
-    setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
     setInput('')
     setAsking(true)
 
-    const result = await askAdvisorSaathi({ question: trimmed, selection, locale: language })
-    setAsking(false)
-
-    if (!result.ok || !result.data) {
-      setMessages((prev) => [...prev, { role: 'assistant', unavailable: true }])
-      return
-    }
-
+    const userId = ++nextIdRef.current
+    const assistantId = ++nextIdRef.current
     setMessages((prev) => [
       ...prev,
-      {
-        role: 'assistant',
-        text: result.data.answer,
-        narrationSource: result.data.narrationSource,
-        tier: result.data.tier,
-        claims: result.data.claims ?? [],
-        numbers: result.data.numbers ?? {},
-      },
+      { id: userId, role: 'user', text: trimmed },
+      { id: assistantId, role: 'assistant', streaming: true, slow: false, text: '' },
     ])
+
+    // Every streaming callback below mutates this same placeholder message
+    // by id (never appends), so the chat shows one assistant bubble
+    // filling in progressively, not several.
+    const updateAssistant = (updater) => {
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? updater(m) : m)))
+    }
+
+    await askAdvisorSaathiStream({
+      question: trimmed,
+      selection,
+      locale: language,
+      onStart: () => {
+        slowTimerRef.current = setTimeout(() => {
+          updateAssistant((m) => ({ ...m, slow: true }))
+        }, SLOW_NOTICE_MS)
+      },
+      onChunk: (_text, fullSoFar) => {
+        clearTimeout(slowTimerRef.current)
+        updateAssistant((m) => ({ ...m, text: fullSoFar, slow: false }))
+      },
+      onDone: ({ answer, narrationSource, tier, claims, numbers }) => {
+        clearTimeout(slowTimerRef.current)
+        updateAssistant((m) => ({
+          ...m,
+          streaming: false,
+          slow: false,
+          text: answer,
+          narrationSource,
+          tier,
+          claims: claims ?? [],
+          numbers: numbers ?? {},
+        }))
+        setAsking(false)
+      },
+      onUnavailable: () => {
+        clearTimeout(slowTimerRef.current)
+        updateAssistant((m) => ({ ...m, streaming: false, slow: false, unavailable: true, text: '' }))
+        setAsking(false)
+      },
+    })
   }
 
   if (!isAuthenticated) {
@@ -106,22 +151,16 @@ export default function AdvisorSaathi() {
             </div>
           )}
 
-          {messages.map((m, idx) =>
+          {messages.map((m) =>
             m.role === 'user' ? (
-              <div key={idx} className="flex justify-end">
+              <div key={m.id} className="flex justify-end">
                 <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-primary-700 text-white px-4 py-2.5 text-[13px]">{m.text}</div>
               </div>
             ) : (
-              <AssistantMessage key={idx} message={m} t={t} />
+              <AssistantMessage key={m.id} message={m} t={t} />
             )
           )}
 
-          {asking && (
-            <div className="flex items-center gap-2 text-[12.5px] text-ink-900/45">
-              <Sparkles size={13} className="animate-pulse" />
-              {t('advisorSaathi.asking')}
-            </div>
-          )}
           <div ref={scrollRef} />
         </div>
 
@@ -169,10 +208,28 @@ function AssistantMessage({ message, t }) {
     )
   }
 
+  // Still streaming and nothing has arrived yet — a bare "thinking"
+  // indicator, same visual language the old blocking version used, just
+  // scoped to this one bubble instead of a page-wide line.
+  if (message.streaming && !message.text) {
+    return (
+      <div className="flex justify-start">
+        <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-primary-50 px-4 py-2.5 text-[12.5px] text-ink-900/45 flex items-center gap-2">
+          <Sparkles size={13} className="animate-pulse" />
+          {t('advisorSaathi.asking')}
+        </div>
+        {message.slow && <p className="mt-1 text-[10.5px] text-ink-900/40">{t('advisorSaathi.slowNotice')}</p>}
+      </div>
+    )
+  }
+
   return (
     <div className="flex justify-start">
       <div className="max-w-[85%]">
-        <div className="rounded-2xl rounded-tl-sm bg-primary-50 px-4 py-2.5 text-[13px] text-ink-900 leading-relaxed">{message.text}</div>
+        <div className="rounded-2xl rounded-tl-sm bg-primary-50 px-4 py-2.5 text-[13px] text-ink-900 leading-relaxed">
+          {message.text}
+          {message.streaming && <span className="inline-block w-[2px] h-[1em] ml-0.5 align-middle bg-primary-400 animate-pulse" />}
+        </div>
         {message.narrationSource === 'template' && (
           <p className="mt-1 text-[10.5px] text-amber-700">{t('advisorSaathi.templateNotice')}</p>
         )}

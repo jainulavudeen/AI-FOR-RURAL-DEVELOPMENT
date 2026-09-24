@@ -1,7 +1,9 @@
 import { schemeEnglishLabel, type LedgerTransaction } from '@setu/core'
 import { queryWithClaims, type GroundingDeps } from '../grounding/service'
+import { retrieveGroundedClaims } from '../grounding/retrieval'
 import type { GroundedClaim, Locale } from '../grounding/types'
-import { buildFinancialSnapshot, type FinancialSnapshot } from '../../lib/financialSnapshot'
+import { createEmbeddingProvider } from '../../llm/embeddingProvider'
+import { buildFinancialSnapshot, type ApplicantSelection, type FinancialSnapshot } from '../../lib/financialSnapshot'
 import type { ChatRequestBody, ChatResult } from './types'
 
 export class ValidationError extends Error {
@@ -39,9 +41,12 @@ function humanizeId(id: string): string {
 // concept for caller-supplied facts, so this keeps the tier decision at
 // 'fast' by default instead of accidentally escalating every call to the
 // expensive strong tier just because multiple distinct facts are present.
-function buildClaimsAndNumbers(snapshot: FinancialSnapshot): { claims: GroundedClaim[]; numbers: Record<string, number> } {
+function buildClaimsAndNumbers(
+  snapshot: FinancialSnapshot,
+  selection: ApplicantSelection
+): { claims: GroundedClaim[]; numbers: Record<string, number> } {
   const vintage = snapshot.asOfDate.slice(0, 10)
-  const { summary, creditScore, topMatches, loanSanctionProbabilities, upcomingFestivals } = snapshot
+  const { summary, creditScore, topMatches, loanSanctionProbabilities, upcomingFestivals, finance, emi } = snapshot
 
   const round1 = (n: number) => Math.round(n * 10) / 10
 
@@ -55,6 +60,13 @@ function buildClaimsAndNumbers(snapshot: FinancialSnapshot): { claims: GroundedC
     digitalSharePercent: round1(summary.digitalSharePercent),
     activeDayCount: summary.activeDayCount,
     creditScore: creditScore.score,
+    projectCost: Math.round(finance.projectCost),
+    loanAmount: Math.round(finance.loanAmount),
+    marginAmount: Math.round(finance.marginAmount),
+    interestRatePercent: finance.scheme.interestRate,
+    tenureYears: finance.scheme.tenureYears,
+    moratoriumMonths: finance.scheme.moratoriumMonths,
+    emi: Math.round(emi.emi),
   }
 
   const claims: GroundedClaim[] = [
@@ -73,6 +85,24 @@ function buildClaimsAndNumbers(snapshot: FinancialSnapshot): { claims: GroundedC
       sourceUrl: '',
       dataVintage: vintage,
       similarity: 0.92,
+    },
+    {
+      text: `Based on a margin capital of ₹${Math.round(selection.margin ?? 0) || Math.round(finance.marginAmount)}, the structured finance is: project cost ₹${numbers.projectCost}, loan amount ₹${numbers.loanAmount} (${schemeEnglishLabel(finance.scheme.id)}), margin ₹${numbers.marginAmount}, interest rate ${numbers.interestRatePercent}%, tenure ${numbers.tenureYears} years with a ${numbers.moratoriumMonths}-month moratorium. The resulting monthly EMI after moratorium is ₹${numbers.emi}.`,
+      sourceId: 'calculator',
+      section: 'Loan structuring',
+      sourceUrl: '',
+      dataVintage: vintage,
+      similarity: 0.95,
+    },
+    {
+      text: `The applicant operates a ${humanizeId(selection.businessId ?? 'unspecified business')} business${
+        selection.districtId ? ` in ${humanizeId(selection.districtId)}` : ''
+      }${selection.stateId ? `, ${humanizeId(selection.stateId)}` : ''}.`,
+      sourceId: 'applicantProfile',
+      section: 'Business & location',
+      sourceUrl: '',
+      dataVintage: vintage,
+      similarity: 0.9,
     },
   ]
 
@@ -113,12 +143,28 @@ export async function chat(deps: AdvisorSaathiDeps, applicantId: string, body: C
     throw new ValidationError('question is required')
   }
 
+  const selection = body.selection ?? {}
   const transactions = await deps.getTransactionsByApplicantId(applicantId)
-  const snapshot = buildFinancialSnapshot(transactions, body.selection ?? {})
-  const { claims, numbers } = buildClaimsAndNumbers(snapshot)
+  const snapshot = buildFinancialSnapshot(transactions, selection)
+  const { claims, numbers } = buildClaimsAndNumbers(snapshot, selection)
   const locale: Locale = body.locale ?? 'en'
 
-  const result = await queryWithClaims(deps, { question: body.question, claims, numbers, locale })
+  // Grounds eligibility-shaped questions ("what documents do I need",
+  // "am I eligible") in the real ingested scheme corpus (retrieval.ts —
+  // the same pgvector search POST /grounding/query uses), on top of the
+  // applicant's own figures above. Never throws (retrieveGroundedClaims
+  // degrades to []) and never imports llm/client.ts itself — only
+  // grounding/service.ts does (CLAUDE.md boundary rule 2); this is a plain
+  // retrieval call, not a model call.
+  const embeddingProvider = deps.embeddingProvider ?? createEmbeddingProvider()
+  const retrievedClaims = await retrieveGroundedClaims(
+    { db: deps.db, embeddingProvider },
+    body.question,
+    { category: selection.categoryId ?? undefined, isWomanOwned: selection.isWomanOwned }
+  )
+  const allClaims = [...claims, ...retrievedClaims]
 
-  return { answer: result.answer, narrationSource: result.narrationSource, tier: result.tier, claims, numbers }
+  const result = await queryWithClaims(deps, { question: body.question, claims: allClaims, numbers, locale })
+
+  return { answer: result.answer, narrationSource: result.narrationSource, tier: result.tier, claims: allClaims, numbers }
 }
