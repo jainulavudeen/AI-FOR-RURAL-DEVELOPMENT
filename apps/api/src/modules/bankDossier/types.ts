@@ -32,3 +32,36 @@ export interface BankDossierRecord {
   snapshot: DossierSnapshot
   createdAt: string
 }
+
+// "Verified Approval" — see approvalSignature.ts's header on why this is
+// never called a digital signature. officerName/officerDesignation are
+// self-reported by the officer at approval time (applicants has no
+// name/designation column) and frozen into this row.
+export interface ApproveDossierBody {
+  officerName: string
+  officerDesignation: string
+}
+
+export interface DossierApproval {
+  id: string
+  dossierId: string
+  officerId: string
+  officerName: string
+  officerDesignation: string
+  signatureHash: string
+  approvedAt: string
+}
+
+// What a bank sees from the public verify endpoint — enough to confirm
+// authenticity without exposing the applicant's financial data. `current`
+// is false when a later approval has superseded this one (re-approval
+// inserts a new row rather than overwriting — see the schema's header);
+// the hash still verifies as genuine, it's just no longer the latest word.
+export interface VerifyApprovalResult {
+  valid: boolean
+  dossierId?: string
+  officerName?: string
+  officerDesignation?: string
+  approvedAt?: string
+  current?: boolean
+}

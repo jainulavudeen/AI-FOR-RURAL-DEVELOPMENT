@@ -71,6 +71,13 @@
       "when": 1790070789889,
       "tag": "0009_purple_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790237971646,
+      "tag": "0010_furry_cable",
+      "breakpoints": true
     }
   ]
 }

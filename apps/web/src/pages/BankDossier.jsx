@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { FileText, Printer, ShieldCheck } from 'lucide-react'
+import { FileText, Printer, ShieldCheck, Stamp, Clock } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
-import { generateBankDossier, getBankDossier } from '../lib/bankDossier'
+import { generateBankDossier, getBankDossier, approveBankDossier } from '../lib/bankDossier'
 import { formatINR } from '../lib/format'
 import { LOCATIONS } from '../data/locations'
 import { BUSINESS_TYPES } from '../data/businesses'
@@ -21,7 +21,7 @@ const DATE_LOCALE = { en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN' }
 // "Download Report" button).
 export default function BankDossier() {
   const { t, language } = useI18n()
-  const { isAuthenticated, requestLogin } = useAuth()
+  const { isAuthenticated, requestLogin, role } = useAuth()
   const { selection } = useAppData()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -152,11 +152,78 @@ export default function BankDossier() {
   }
 
   return (
-    <DossierView dossier={dossier} t={t} language={language} />
+    <DossierView
+      dossier={dossier}
+      t={t}
+      language={language}
+      isOfficer={role === 'officer'}
+      onApproved={(approval) => setDossier((prev) => (prev ? { ...prev, latestApproval: approval } : prev))}
+    />
   )
 }
 
-function DossierView({ dossier, t, language }) {
+function ApprovalPanel({ dossierId, t, onApproved }) {
+  const [officerName, setOfficerName] = useState('')
+  const [officerDesignation, setOfficerDesignation] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    const result = await approveBankDossier(dossierId, {
+      officerName: officerName.trim(),
+      officerDesignation: officerDesignation.trim(),
+    })
+    setSubmitting(false)
+    if (result.ok && result.data) {
+      onApproved(result.data)
+      setOfficerName('')
+      setOfficerDesignation('')
+    } else {
+      setError(result.data?.error?.message ?? t('bankDossier.approveError'))
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="no-print mb-6 rounded-2xl border border-teal-600/30 bg-teal-50/50 p-5 space-y-3">
+      <p className="flex items-center gap-1.5 text-[13px] font-bold text-teal-800">
+        <Stamp size={14} />
+        {t('bankDossier.approvalPanelTitle')}
+      </p>
+      <p className="text-[11.5px] text-teal-900/70">{t('bankDossier.approvalPanelHint')}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input
+          type="text"
+          required
+          value={officerName}
+          onChange={(e) => setOfficerName(e.target.value)}
+          placeholder={t('bankDossier.officerNamePlaceholder')}
+          className="rounded-xl border border-teal-600/30 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-teal-600 focus:outline-none"
+        />
+        <input
+          type="text"
+          required
+          value={officerDesignation}
+          onChange={(e) => setOfficerDesignation(e.target.value)}
+          placeholder={t('bankDossier.officerDesignationPlaceholder')}
+          className="rounded-xl border border-teal-600/30 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-teal-600 focus:outline-none"
+        />
+      </div>
+      {error && <p className="text-[12px] text-red-600">{error}</p>}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="rounded-full bg-teal-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-teal-600 disabled:opacity-50 transition-colors"
+      >
+        {submitting ? t('bankDossier.approving') : t('bankDossier.approveCta')}
+      </button>
+    </form>
+  )
+}
+
+function DossierView({ dossier, t, language, isOfficer, onApproved }) {
   const s = dossier.snapshot
   const stateLabel = s.stateId ? t(LOCATIONS[s.stateId]?.labelKey ?? '') : ''
   const districtObj = s.stateId ? LOCATIONS[s.stateId]?.districts.find((d) => d.id === s.districtId) : null
@@ -178,6 +245,8 @@ function DossierView({ dossier, t, language }) {
           {t('bankDossier.printCta')}
         </button>
       </div>
+
+      {isOfficer && <ApprovalPanel dossierId={dossier.id} t={t} onApproved={onApproved} />}
 
       <div className="dossier-print rounded-3xl border border-primary-100 bg-white p-6 sm:p-10 print:rounded-none print:border-none">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-primary-100 pb-4 mb-6">
@@ -284,7 +353,55 @@ function DossierView({ dossier, t, language }) {
         <Section number={5} title={t('bankDossier.section5Title')}>
           <p className="text-[11.5px] text-ink-900/60 leading-relaxed">{t('bankDossier.authenticationBody', { ref: s.docRef })}</p>
         </Section>
+
+        <ApprovalBlock approval={dossier.latestApproval} t={t} language={language} />
       </div>
+    </div>
+  )
+}
+
+// Always prints something here — "APPROVED" with real detail, or a clear
+// "Pending review" — never blank. CLAUDE.md item 7: call this "Verified
+// Approval", never "digitally signed" (no government DSC exists in this
+// app). The signature hash is printed so a bank can check it themselves
+// at GET /bank-dossier/verify/:hash with no Setu login needed.
+function ApprovalBlock({ approval, t, language }) {
+  return (
+    <div className="mt-2 rounded-2xl border-2 border-dashed border-primary-200 p-5">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-primary-600 mb-3">{t('bankDossier.approvalSectionTitle')}</p>
+      {approval ? (
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-700 px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white mb-3">
+            <Stamp size={13} />
+            {t('bankDossier.approvedStamp')}
+          </span>
+          <FactGrid
+            items={[
+              [t('bankDossier.approvedByLabel'), approval.officerName],
+              [t('bankDossier.officerDesignationLabel'), approval.officerDesignation],
+              [t('bankDossier.officerIdLabel'), approval.officerId],
+              [
+                t('bankDossier.approvedAtLabel'),
+                new Date(approval.approvedAt).toLocaleString(DATE_LOCALE[language] || 'en-IN', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              ],
+            ]}
+          />
+          <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-ink-900/35">{t('bankDossier.signatureHashLabel')}</p>
+          <p className="font-mono text-[10.5px] text-ink-900/70 break-all">{approval.signatureHash}</p>
+          <p className="mt-2 text-[10.5px] text-ink-900/45 leading-snug">{t('bankDossier.verifyInstructions')}</p>
+        </div>
+      ) : (
+        <p className="flex items-center gap-1.5 text-[12.5px] font-bold text-amber-700">
+          <Clock size={13} />
+          {t('bankDossier.pendingReview')}
+        </p>
+      )}
     </div>
   )
 }

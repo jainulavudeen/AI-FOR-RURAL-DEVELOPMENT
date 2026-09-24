@@ -7,6 +7,11 @@ const envSchema = z.object({
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   OTP_HASH_SECRET: z.string().min(1, 'OTP_HASH_SECRET is required'),
+  // Signs Bank Dossier "Verified Approval" hashes — deliberately its own
+  // secret, not a reuse of JWT_SECRET/OTP_HASH_SECRET: a signature that
+  // outlives the dossier it's printed on (banks may hold the paper for
+  // years) shouldn't share a rotation lifecycle with session/OTP secrets.
+  APPROVAL_SIGNING_SECRET: z.string().min(1, 'APPROVAL_SIGNING_SECRET is required'),
   SMS_PROVIDER: z.enum(['console', 'msg91']).default('console'),
   MSG91_API_KEY: z.string().optional(),
   MSG91_SENDER_ID: z.string().optional(),
