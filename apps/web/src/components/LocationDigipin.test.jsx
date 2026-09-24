@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { I18nProvider } from '../i18n/I18nContext'
 import LocationDigipin from './LocationDigipin'
 import * as marketData from '../lib/marketData'
+import * as geography from '../lib/geography'
 
 // Regression coverage for: "selecting a valid district does nothing" —
 // root cause was LocationDigipin's reverse-geocode callback unconditionally
@@ -49,6 +50,16 @@ describe('LocationDigipin GPS reverse-geocode race condition', () => {
     positionDeferred = deferred()
     geocodeDeferred = deferred()
     vi.spyOn(marketData, 'getReverseGeocode').mockReturnValue(geocodeDeferred.promise)
+    // matchLocationByName hits GET /geography/districts against the real
+    // nationwide catalogue (lib/geography.js) — stubbed here so this test
+    // doesn't depend on a live API server being reachable.
+    vi.spyOn(geography, 'matchLocationByName').mockResolvedValue({
+      stateId: 'tamil_nadu',
+      stateName: 'Tamil Nadu',
+      districtId: 'madurai',
+      districtName: 'Madurai',
+      districtUuid: 'uuid-madurai',
+    })
     Object.defineProperty(navigator, 'geolocation', {
       value: { getCurrentPosition: vi.fn((resolve) => positionDeferred.promise.then(resolve)) },
       configurable: true,

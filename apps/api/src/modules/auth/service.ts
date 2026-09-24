@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis'
+import type { RedisLike } from '../../lib/redis/types'
 import { checkAndIncrement, checkCooldown } from '../../lib/rateLimit'
 import { generateOtpCode, hashOtpCode, otpKeys, verifyOtpCode } from './otp'
 import type { SmsProvider } from './smsProvider'
@@ -31,7 +31,7 @@ export interface Applicant {
 // and expiry paths can be tested against a fake Redis + stub applicant
 // lookup, with no live Postgres required.
 export interface AuthDeps {
-  redis: Redis
+  redis: RedisLike
   smsProvider: SmsProvider
   findOrCreateApplicant: (phone: string) => Promise<Applicant>
   getApplicantById: (id: string) => Promise<Applicant | null>
@@ -72,7 +72,7 @@ export async function requestOtp(deps: AuthDeps, phone: string, ip: string): Pro
   }
 
   const code = generateOtpCode()
-  await redis.set(otpKeys.code(phone), hashOtpCode(code), 'EX', OTP_TTL_SECONDS)
+  await redis.set(otpKeys.code(phone), hashOtpCode(code), { ex: OTP_TTL_SECONDS })
   await redis.del(otpKeys.attempts(phone))
   await deps.smsProvider.sendOtp(phone, code)
 
@@ -110,7 +110,7 @@ export async function verifyOtp(deps: AuthDeps, phone: string, code: string, ip:
     await redis.expire(otpKeys.attempts(phone), codeTtl > 0 ? codeTtl : OTP_TTL_SECONDS)
 
     if (attempts >= MAX_VERIFY_ATTEMPTS) {
-      await redis.set(otpKeys.lock(phone), '1', 'EX', LOCKOUT_SECONDS)
+      await redis.set(otpKeys.lock(phone), '1', { ex: LOCKOUT_SECONDS })
       await redis.del(otpKeys.code(phone))
       await redis.del(otpKeys.attempts(phone))
       return { ok: false, reason: 'locked', retryAfterSeconds: LOCKOUT_SECONDS }

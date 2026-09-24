@@ -1,7 +1,7 @@
 // Retrieval + narration. THE ONLY MODULE PERMITTED TO CALL AN LLM
 // (CLAUDE.md, non-negotiable boundary rule 2). No other module in this app
 // may import ../../llm/client — that import is the enforcement point.
-import type { Redis } from 'ioredis'
+import type { RedisLike } from '../../lib/redis/types'
 import type { Db } from '../../db/client'
 import { env } from '../../config/env'
 import { sha256Hex, stableStringify } from '../../lib/hash'
@@ -21,7 +21,7 @@ const SIMILARITY_EPSILON = 0.05
 
 export interface GroundingDeps {
   db: Db
-  redis: Redis
+  redis: RedisLike
   llmProvider?: LlmProvider
   embeddingProvider?: EmbeddingProvider
 }
@@ -73,7 +73,7 @@ export async function narrateReport(deps: GroundingDeps, input: NarrationInput):
       console.warn('[grounding] narration rejected — numbers not in structured input', { cacheKey, invalid: validation.invalid })
       return { text: buildFallbackNarration(input), narrationSource: 'template' }
     }
-    await deps.redis.set(cacheKey, text, 'EX', NARRATION_CACHE_TTL_SECONDS).catch(() => {})
+    await deps.redis.set(cacheKey, text, { ex: NARRATION_CACHE_TTL_SECONDS }).catch(() => {})
     return { text, narrationSource: 'llm', tier: 'fast' }
   } catch (err) {
     console.warn('[grounding] narration fell back to template', {
@@ -118,7 +118,7 @@ async function runQuery(
     }
     if (cacheKey) {
       const ttl = tier === 'strong' ? STRONG_CACHE_TTL_SECONDS : NARRATION_CACHE_TTL_SECONDS
-      await deps.redis.set(cacheKey, text, 'EX', ttl).catch(() => {})
+      await deps.redis.set(cacheKey, text, { ex: ttl }).catch(() => {})
     }
     return { answer: text, narrationSource: 'llm', tier, claims }
   } catch (err) {
@@ -235,7 +235,7 @@ export async function estimateFeasibilityFactors(
       console.warn('[grounding] feasibility estimate rejected — response did not parse as the expected JSON shape', { cacheKey })
       return null
     }
-    await deps.redis.set(cacheKey, JSON.stringify(estimate), 'EX', FEASIBILITY_ESTIMATE_CACHE_TTL_SECONDS).catch(() => {})
+    await deps.redis.set(cacheKey, JSON.stringify(estimate), { ex: FEASIBILITY_ESTIMATE_CACHE_TTL_SECONDS }).catch(() => {})
     return estimate
   } catch (err) {
     console.warn('[grounding] feasibility estimate unavailable', { cacheKey, reason: err instanceof Error ? err.message : String(err) })

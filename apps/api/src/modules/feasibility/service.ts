@@ -1,5 +1,5 @@
 import { and, eq, ilike, isNull } from 'drizzle-orm'
-import type { Redis } from 'ioredis'
+import type { RedisLike } from '../../lib/redis/types'
 import { BASE_SCORE, DEFAULT_BASE_SCORE, classifyVerdict, clampScore } from '@setu/core'
 import type { Db } from '../../db/client'
 import { blocks, districts, informalLendingRates } from '../../db/schema'
@@ -58,7 +58,7 @@ function computeActivityValue(prices: { modalPrice: number }[]): number {
 // slow, or timed out degrades to the cached value (labeled 'cached', with
 // its own asOf so the explanation can say how old it is) or a neutral 0
 // with no cached fallback — never an error surfaced to the caller.
-export async function getLocalDemandSignal(redis: Redis, provider: AgmarknetProvider, district: string): Promise<DemandSignal> {
+export async function getLocalDemandSignal(redis: RedisLike, provider: AgmarknetProvider, district: string): Promise<DemandSignal> {
   try {
     const result = await withTimeout(getCachedDistrictActivity(redis, provider, district), TIMEOUT_MS)
     if (!result.snapshot) {
@@ -164,7 +164,7 @@ export interface FeasibilityScoreResult {
 
 export interface AssembleFeasibilityScoreDeps {
   db: Db
-  redis: Redis
+  redis: RedisLike
   agmarknetProvider: AgmarknetProvider
   narrate: (input: NarrationInput) => Promise<NarrationResult>
   // Optional deliberately — every existing caller (and every test) keeps

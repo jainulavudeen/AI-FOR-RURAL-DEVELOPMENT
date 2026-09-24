@@ -4,7 +4,17 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
+  // REDIS_URL is required only when REDIS_PROVIDER=ioredis (the default —
+  // local dev via docker-compose, or any long-running non-Vercel deploy).
+  // UPSTASH_REDIS_REST_URL/TOKEN are required only when REDIS_PROVIDER=upstash
+  // (Vercel serverless — a persistent TCP client doesn't behave reliably
+  // there; see lib/redis/{ioredisClient,upstashClient}.ts). Enforced below
+  // via superRefine rather than each being independently required, so
+  // neither deploy target needs to configure the other's credentials.
+  REDIS_PROVIDER: z.enum(['ioredis', 'upstash']).default('ioredis'),
+  REDIS_URL: z.string().min(1).optional(),
+  UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   OTP_HASH_SECRET: z.string().min(1, 'OTP_HASH_SECRET is required'),
   // Signs Bank Dossier "Verified Approval" hashes — deliberately its own
@@ -59,6 +69,18 @@ const envSchema = z.object({
   // and caps at ~1 req/sec — fine here since this is only ever triggered
   // by one explicit user tap, never bulk/automated.
   GEOCODING_USER_AGENT: z.string().default('Setu-SIH26091/1.0 (Smart India Hackathon submission; no contact configured)'),
+}).superRefine((val, ctx) => {
+  if (val.REDIS_PROVIDER === 'ioredis' && !val.REDIS_URL) {
+    ctx.addIssue({ code: 'custom', path: ['REDIS_URL'], message: 'REDIS_URL is required when REDIS_PROVIDER=ioredis' })
+  }
+  if (val.REDIS_PROVIDER === 'upstash') {
+    if (!val.UPSTASH_REDIS_REST_URL) {
+      ctx.addIssue({ code: 'custom', path: ['UPSTASH_REDIS_REST_URL'], message: 'UPSTASH_REDIS_REST_URL is required when REDIS_PROVIDER=upstash' })
+    }
+    if (!val.UPSTASH_REDIS_REST_TOKEN) {
+      ctx.addIssue({ code: 'custom', path: ['UPSTASH_REDIS_REST_TOKEN'], message: 'UPSTASH_REDIS_REST_TOKEN is required when REDIS_PROVIDER=upstash' })
+    }
+  }
 })
 
 export const env = envSchema.parse(process.env)

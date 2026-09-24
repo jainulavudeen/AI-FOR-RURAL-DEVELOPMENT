@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis'
+import type { RedisLike } from '../../lib/redis/types'
 import type { Db } from '../../db/client'
 import { findBlockIdByName, findDistrictIdByName } from './service'
 
@@ -17,7 +17,7 @@ const blockKey = (districtId: string, name: string) => `block-id:${districtId}:$
 // caller-supplied names are apps/web's mock slugs that will never resolve
 // (see CLAUDE.md's naming-scheme gap) — so undefined (cache miss) and null
 // (cached miss) are distinguished here.
-async function readCachedId(redis: Redis, key: string): Promise<string | null | undefined> {
+async function readCachedId(redis: RedisLike, key: string): Promise<string | null | undefined> {
   try {
     const raw = await redis.get(key)
     if (raw === null) return undefined
@@ -27,15 +27,15 @@ async function readCachedId(redis: Redis, key: string): Promise<string | null | 
   }
 }
 
-async function writeCachedId(redis: Redis, key: string, id: string | null): Promise<void> {
+async function writeCachedId(redis: RedisLike, key: string, id: string | null): Promise<void> {
   try {
-    await redis.set(key, JSON.stringify({ id }), 'EX', TTL_SECONDS)
+    await redis.set(key, JSON.stringify({ id }), { ex: TTL_SECONDS })
   } catch {
     // Best-effort — a failed cache write must never fail the request.
   }
 }
 
-export async function getCachedDistrictId(redis: Redis, db: Db, name: string): Promise<string | null> {
+export async function getCachedDistrictId(redis: RedisLike, db: Db, name: string): Promise<string | null> {
   const key = districtKey(name)
   const cached = await readCachedId(redis, key)
   if (cached !== undefined) return cached
@@ -44,7 +44,7 @@ export async function getCachedDistrictId(redis: Redis, db: Db, name: string): P
   return id
 }
 
-export async function getCachedBlockId(redis: Redis, db: Db, districtId: string, name: string): Promise<string | null> {
+export async function getCachedBlockId(redis: RedisLike, db: Db, districtId: string, name: string): Promise<string | null> {
   const key = blockKey(districtId, name)
   const cached = await readCachedId(redis, key)
   if (cached !== undefined) return cached

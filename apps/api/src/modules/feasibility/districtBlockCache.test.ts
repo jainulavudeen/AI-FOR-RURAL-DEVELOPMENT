@@ -1,4 +1,4 @@
-import RedisMock from 'ioredis-mock'
+import { createFakeRedis } from '../../testUtils/fakeRedis'
 import { describe, expect, it, vi } from 'vitest'
 import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache'
 
@@ -15,7 +15,7 @@ function makeDb(rows: { id: string }[]) {
 
 describe('getCachedDistrictId', () => {
   it('queries Postgres on a cache miss and caches the result', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const db = makeDb([{ id: 'district-uuid-1' }])
 
@@ -29,7 +29,7 @@ describe('getCachedDistrictId', () => {
   })
 
   it('caches a not-found result too, so a name that never resolves stops hitting Postgres', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const db = makeDb([])
 
@@ -39,7 +39,7 @@ describe('getCachedDistrictId', () => {
   })
 
   it('falls through to Postgres if Redis reads fail, without throwing', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     vi.spyOn(redis, 'get').mockRejectedValueOnce(new Error('redis down'))
     const db = makeDb([{ id: 'district-uuid-1' }])
@@ -51,7 +51,7 @@ describe('getCachedDistrictId', () => {
 
 describe('getCachedBlockId', () => {
   it('namespaces the cache key by district id, so the same block name under a different district misses', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const db = makeDb([{ id: 'block-uuid-1' }])
 

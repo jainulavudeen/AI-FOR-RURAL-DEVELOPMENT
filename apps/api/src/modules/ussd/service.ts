@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis'
+import type { RedisLike } from '../../lib/redis/types'
 import { entryScreen, handleInput, initialSession, type UssdSession } from './sessionMachine'
 
 // "Session times out fast" — USSD sessions are conventionally much
@@ -16,7 +16,7 @@ const sessionKey = (sessionId: string) => `ussd:session:${sessionId}`
 // gateway has its own short timeout regardless; an unresolved request here
 // would just look like a dropped call, which is the honest failure mode
 // anyway.
-async function getSession(redis: Redis, sessionId: string): Promise<UssdSession | null> {
+async function getSession(redis: RedisLike, sessionId: string): Promise<UssdSession | null> {
   try {
     const raw = await redis.get(sessionKey(sessionId))
     return raw ? (JSON.parse(raw) as UssdSession) : null
@@ -25,12 +25,12 @@ async function getSession(redis: Redis, sessionId: string): Promise<UssdSession 
   }
 }
 
-async function saveSession(redis: Redis, sessionId: string, session: UssdSession): Promise<void> {
+async function saveSession(redis: RedisLike, sessionId: string, session: UssdSession): Promise<void> {
   try {
     if (session.step === 'done') {
       await redis.del(sessionKey(sessionId))
     } else {
-      await redis.set(sessionKey(sessionId), JSON.stringify(session), 'EX', SESSION_TTL_SECONDS)
+      await redis.set(sessionKey(sessionId), JSON.stringify(session), { ex: SESSION_TTL_SECONDS })
     }
   } catch {
     // Best-effort — a failed write just means the next turn starts fresh,
@@ -46,7 +46,7 @@ export interface UssdTurnResponse {
 // One HTTP call per USSD turn — see routes.ts. `input` is the single digit
 // string the gateway forwarded for this turn (not the accumulated
 // "1*2*3"-style text some gateways send — see routes.ts for why).
-export async function processUssdTurn(redis: Redis, sessionId: string, input: string): Promise<UssdTurnResponse> {
+export async function processUssdTurn(redis: RedisLike, sessionId: string, input: string): Promise<UssdTurnResponse> {
   const existing = await getSession(redis, sessionId)
 
   if (!existing && !input) {

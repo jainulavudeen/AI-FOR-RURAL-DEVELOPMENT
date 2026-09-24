@@ -1,4 +1,4 @@
-import RedisMock from 'ioredis-mock'
+import { createFakeRedis } from '../../testUtils/fakeRedis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LlmProvider, LlmTier } from '../../llm/client'
 import type { EmbeddingProvider } from '../../llm/embeddingProvider'
@@ -46,7 +46,7 @@ describe('narrateReport', () => {
   })
 
   it('returns the LLM narration and caches it when the output is valid', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const generate = vi.fn(async () => 'Your score is 78 with a loan of ₹1,25,000 and EMI ₹3,805.')
     const llmProvider = makeLlmProvider(generate)
@@ -61,7 +61,7 @@ describe('narrateReport', () => {
   })
 
   it('skips the LLM entirely on a cache hit', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const generate = vi.fn(async () => 'Your score is 78.')
     const llmProvider = makeLlmProvider(generate)
@@ -77,7 +77,7 @@ describe('narrateReport', () => {
   })
 
   it('falls back to the deterministic template when the LLM times out', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const llmProvider = makeLlmProvider(() => new Promise((resolve) => setTimeout(() => resolve('too slow'), 10_000)))
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -91,7 +91,7 @@ describe('narrateReport', () => {
   }, 10_000)
 
   it('rejects a narration that invents a number and falls back to the template — the adversarial case', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     // A deliberately number-inventing mock model: ₹2,00,000 was never given.
     const llmProvider = makeLlmProvider(async () => 'We suggest a loan of ₹2,00,000 for your business.')
@@ -116,7 +116,7 @@ describe('query — deterministic tier escalation', () => {
   const body: QueryRequestBody = { question: 'Am I eligible for NSFDC?', context: { locale: 'en' } }
 
   it('uses the fast tier when retrieval finds one clear match', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const rows = [{ text: 'SC applicants qualify', section: 'Eligibility', schemeId: 'nsfdc', sourceUrl: 'https://nsfdc.nic.in', vintageLabel: '2024', distance: 0.1 }]
     let capturedTier: LlmTier | null = null
@@ -135,7 +135,7 @@ describe('query — deterministic tier escalation', () => {
   })
 
   it('escalates to the strong tier when retrieval similarity is weak (genuine ambiguity)', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const rows = [{ text: 'Unclear match', section: 'Eligibility', schemeId: 'nsfdc', sourceUrl: 'https://nsfdc.nic.in', vintageLabel: '2024', distance: 0.6 }]
     let capturedTier: LlmTier | null = null
@@ -154,7 +154,7 @@ describe('query — deterministic tier escalation', () => {
   })
 
   it('escalates to the strong tier when two different schemes are equally plausible', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const rows = [
       { text: 'SC applicants qualify', section: 'Eligibility', schemeId: 'nsfdc', sourceUrl: 'https://nsfdc.nic.in', vintageLabel: '2024', distance: 0.1 },
@@ -176,7 +176,7 @@ describe('query — deterministic tier escalation', () => {
   })
 
   it('degrades to the fallback answer, never throwing, when the LLM is unreachable', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const rows: unknown[] = []
     const llmProvider = makeLlmProvider(async () => {
@@ -211,7 +211,7 @@ describe('queryWithClaims — the advisorSaathi seam', () => {
   ]
 
   it('never touches retrieval/the db — trusts the caller-supplied claims entirely', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const generate = vi.fn(async () => 'Your average monthly sales are ₹52,000.')
     const llmProvider = makeLlmProvider(generate)
@@ -230,7 +230,7 @@ describe('queryWithClaims — the advisorSaathi seam', () => {
   })
 
   it('never caches — two calls with identical input both hit the LLM', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const generate = vi.fn(async () => 'Your average monthly sales are ₹52,000.')
     const llmProvider = makeLlmProvider(generate)
@@ -247,7 +247,7 @@ describe('queryWithClaims — the advisorSaathi seam', () => {
   })
 
   it('rejects an answer that invents a number outside the caller-supplied numbers map', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const llmProvider = makeLlmProvider(async () => 'Your average monthly sales are ₹99,000.')
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -272,7 +272,7 @@ describe('estimateFeasibilityFactors', () => {
   const context = { businessLabel: 'Dairy', stateName: 'Bihar', districtName: 'Gaya' }
 
   it('parses a valid JSON estimate and clamps nothing that is already in range', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const llmProvider = makeLlmProvider(async () => JSON.stringify({ demand: 3, infrastructure: -2, market: 1, reasoning: 'A mid-sized district.' }))
 
@@ -282,7 +282,7 @@ describe('estimateFeasibilityFactors', () => {
   })
 
   it('tolerates a code-fenced JSON response (models sometimes wrap it despite instructions not to)', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const llmProvider = makeLlmProvider(async () => '```json\n{"demand": 2, "infrastructure": 2, "market": 2}\n```')
 
@@ -292,7 +292,7 @@ describe('estimateFeasibilityFactors', () => {
   })
 
   it('drops an out-of-range field to null rather than clamping it and keeping it as if the model had been careful', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     // infrastructure's real range is -6..6 — 40 is nonsense, not "very good infrastructure".
     const llmProvider = makeLlmProvider(async () => JSON.stringify({ demand: 1, infrastructure: 40, market: -1 }))
@@ -305,7 +305,7 @@ describe('estimateFeasibilityFactors', () => {
   })
 
   it('degrades to null (never a fabricated estimate) when the response is not valid JSON', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const llmProvider = makeLlmProvider(async () => 'MOCK: (strong tier) some echoed prompt text, not JSON at all')
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -317,7 +317,7 @@ describe('estimateFeasibilityFactors', () => {
   })
 
   it('degrades to null, never blocking, when the LLM is unreachable or times out', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const llmProvider = makeLlmProvider(async () => {
       throw new Error('unreachable')
@@ -329,7 +329,7 @@ describe('estimateFeasibilityFactors', () => {
   })
 
   it('caches a real estimate so an identical (business, state, district) call skips the LLM entirely', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     let calls = 0
     const llmProvider = makeLlmProvider(async () => {

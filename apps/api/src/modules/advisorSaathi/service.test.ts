@@ -1,4 +1,4 @@
-import RedisMock from 'ioredis-mock'
+import { createFakeRedis } from '../../testUtils/fakeRedis'
 import { describe, expect, it, vi } from 'vitest'
 import type { LedgerTransaction } from '@setu/core'
 import type { LlmProvider, LlmTier } from '../../llm/client'
@@ -15,7 +15,7 @@ const sampleTransactions: LedgerTransaction[] = [
 ]
 
 function makeDeps(overrides: Partial<AdvisorSaathiDeps> = {}): AdvisorSaathiDeps {
-  const redis = new RedisMock()
+  const redis = createFakeRedis()
   return {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     db: {} as any,

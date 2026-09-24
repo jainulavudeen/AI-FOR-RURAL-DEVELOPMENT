@@ -1,4 +1,4 @@
-import RedisMock from 'ioredis-mock'
+import { createFakeRedis } from '../../testUtils/fakeRedis'
 import { describe, expect, it, vi } from 'vitest'
 import { villageAmenities, villages } from '../../db/schema'
 import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
@@ -8,12 +8,9 @@ function makeProvider(fn: AgmarknetProvider['fetchDistrictActivity']): Agmarknet
   return { fetchDistrictActivity: fn }
 }
 
-// ioredis-mock instances share one default in-memory store by design —
-// every test here targets the same district ('Madurai'), so each flushes
-// first or it silently reads a previous test's cached entry.
 describe('getLocalDemandSignal', () => {
   it('returns a live signal on a successful fetch', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(async (district): Promise<RawMarketActivity> => ({
       district,
@@ -31,7 +28,7 @@ describe('getLocalDemandSignal', () => {
   })
 
   it('degrades to neutral, never throwing, when Agmarknet is down and nothing is cached', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(async () => {
       throw new Error('agmarknet unreachable')
@@ -42,7 +39,7 @@ describe('getLocalDemandSignal', () => {
   })
 
   it('degrades to a labeled cached value, not neutral, when a stale cache entry exists', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const staleEntry = {
       snapshot: {
@@ -64,7 +61,7 @@ describe('getLocalDemandSignal', () => {
   })
 
   it('degrades to neutral if the fetch takes too long, never blocking the caller', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(
       () => new Promise((resolve) => setTimeout(() => resolve({ district: 'Madurai', prices: [], fetchedAt: new Date().toISOString() }), 10_000))
@@ -93,7 +90,7 @@ describe('getInformalLendingRate', () => {
 
 describe('assembleFeasibilityScore', () => {
   it('composes baseline + a real demand signal, excludes infra/shg (no district/block data), and narrates it', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(async (district): Promise<RawMarketActivity> => ({
       district,
@@ -130,7 +127,7 @@ describe('assembleFeasibilityScore', () => {
   })
 
   it('includes infra as a real, sourced factor once a district/block resolves to real ingested data', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(async () => {
       throw new Error('agmarknet down') // keep demand neutral/excluded to isolate the infra assertion
@@ -172,7 +169,7 @@ describe('assembleFeasibilityScore', () => {
   })
 
   it('fills a factor with an AI estimate, clearly labelled, when no real signal exists at all for that district', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(async () => {
       throw new Error('agmarknet down')
@@ -206,7 +203,7 @@ describe('assembleFeasibilityScore', () => {
   })
 
   it('never calls the AI estimator for a factor that already has real data — real always wins over a guess', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(async (district) => ({
       district,
@@ -233,7 +230,7 @@ describe('assembleFeasibilityScore', () => {
   })
 
   it('leaves a factor excluded, not fabricated, when even the AI estimate has nothing for that field', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider(async () => {
       throw new Error('agmarknet down')

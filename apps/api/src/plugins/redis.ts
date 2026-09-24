@@ -1,27 +1,28 @@
 import fp from 'fastify-plugin'
 import type { FastifyPluginAsync } from 'fastify'
-import { Redis } from 'ioredis'
 import { env } from '../config/env'
+import type { RedisLike } from '../lib/redis/types'
+import { createIoredisClient } from '../lib/redis/ioredisClient'
+import { createUpstashClient } from '../lib/redis/upstashClient'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    redis: Redis
+    redis: RedisLike
   }
 }
 
 const redisPlugin: FastifyPluginAsync = async (fastify) => {
-  // THE NON-NEGOTIABLE BOUNDARY (CLAUDE.md, rule 4): the app degrades
-  // instead of erroring — a spinner that never resolves is not acceptable.
-  // ioredis's own defaults (maxRetriesPerRequest: 20, unbounded backoff
-  // growth) were observed to leave a queued command pending well past a
-  // minute once the connection had failed repeatedly — bounded here so a
-  // command issued while Redis is unreachable fails within a few seconds,
-  // not indefinitely.
-  const redis = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    retryStrategy: (times) => Math.min(times * 200, 1000),
-    connectTimeout: 3000,
-  })
+  // REDIS_PROVIDER follows this codebase's established mock/real-style
+  // provider-switch pattern (LLM_PROVIDER, AGMARKNET_PROVIDER, etc.):
+  // `ioredis` (default) is a persistent TCP client for local dev via
+  // docker-compose and any long-running deploy target; `upstash` is a
+  // stateless HTTP client for Vercel serverless functions, where a
+  // persistent TCP connection per invocation doesn't behave reliably.
+  const redis: RedisLike =
+    env.REDIS_PROVIDER === 'upstash'
+      ? createUpstashClient(env.UPSTASH_REDIS_REST_URL!, env.UPSTASH_REDIS_REST_TOKEN!)
+      : createIoredisClient(env.REDIS_URL!)
+
   fastify.decorate('redis', redis)
   fastify.addHook('onClose', async () => {
     await redis.quit()

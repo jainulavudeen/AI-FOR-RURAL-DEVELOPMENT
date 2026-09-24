@@ -1,4 +1,4 @@
-import RedisMock from 'ioredis-mock'
+import { createFakeRedis } from '../../testUtils/fakeRedis'
 import { describe, expect, it } from 'vitest'
 import { otpKeys } from './otp'
 import { logout, refreshSession, requestOtp, verifyOtp, type Applicant, type AuthDeps } from './service'
@@ -16,13 +16,8 @@ class RecordingSmsProvider implements SmsProvider {
   }
 }
 
-// ioredis-mock instances share one default in-memory store by design (they
-// simulate separate clients talking to the same server) — flush it so each
-// test starts from a clean keyspace instead of leaking counters/locks into
-// the next test via shared PHONE/IP values.
 async function makeDeps() {
-  const redis = new RedisMock()
-  await redis.flushall()
+  const redis = createFakeRedis()
   const sms = new RecordingSmsProvider()
   const byPhone = new Map<string, Applicant>()
   const byId = new Map<string, Applicant>()
@@ -43,7 +38,7 @@ async function makeDeps() {
     getApplicantById: async (id) => byId.get(id) ?? null,
   }
 
-  return { deps, sms }
+  return { deps, sms, redis }
 }
 
 const PHONE = '+919876543210'
@@ -115,12 +110,12 @@ describe('verifyOtp — expiry and attempt caps', () => {
   })
 
   it('rejects a code once its TTL has actually elapsed', async () => {
-    const { deps, sms } = await makeDeps()
+    const { deps, sms, redis } = await makeDeps()
     await requestOtp(deps, PHONE, IP)
     const code = sms.sent.get(PHONE)!
 
     // Force the code's TTL down instead of waiting out the real 5 minutes.
-    await deps.redis.pexpire(otpKeys.code(PHONE), 50)
+    await redis.pexpire(otpKeys.code(PHONE), 50)
     await sleep(150)
 
     const result = await verifyOtp(deps, PHONE, code, IP)

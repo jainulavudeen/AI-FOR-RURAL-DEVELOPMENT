@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis'
+import type { RedisLike } from '../../lib/redis/types'
 import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
 
 const FRESH_SECONDS = 6 * 60 * 60 // 6h — Agmarknet itself refreshes ~daily; well inside a day
@@ -22,7 +22,7 @@ const cacheKey = (district: string) => `agmarknet:${district.toLowerCase()}`
 // never delay or break this response); beyond TTL_SECONDS nothing is
 // served and the caller decides how to degrade (see feasibility/service.ts).
 export async function getCachedDistrictActivity(
-  redis: Redis,
+  redis: RedisLike,
   provider: AgmarknetProvider,
   district: string
 ): Promise<CachedFetchResult> {
@@ -50,9 +50,9 @@ export async function getCachedDistrictActivity(
   }
 }
 
-async function refetchAndStore(redis: Redis, provider: AgmarknetProvider, district: string, key: string): Promise<RawMarketActivity> {
+async function refetchAndStore(redis: RedisLike, provider: AgmarknetProvider, district: string, key: string): Promise<RawMarketActivity> {
   const snapshot = await provider.fetchDistrictActivity(district)
   const entry: CacheEntry = { snapshot, fetchedAt: Date.now() }
-  await redis.set(key, JSON.stringify(entry), 'EX', TTL_SECONDS)
+  await redis.set(key, JSON.stringify(entry), { ex: TTL_SECONDS })
   return snapshot
 }

@@ -1,12 +1,8 @@
-import RedisMock from 'ioredis-mock'
+import { createFakeRedis } from '../../testUtils/fakeRedis'
 import { describe, expect, it, vi } from 'vitest'
 import { getCachedDistrictActivity } from './agmarknetCache'
 import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
 
-// ioredis-mock instances share one default in-memory store by design (they
-// simulate separate clients talking to the same server) — every test here
-// uses the same district ('Madurai'), so each one flushes first or it
-// silently reads a previous test's cached entry.
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -24,7 +20,7 @@ function makeProvider(overrides: Partial<AgmarknetProvider> = {}): AgmarknetProv
 
 describe('getCachedDistrictActivity', () => {
   it('fetches and caches on first call (nothing cached yet)', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider()
     const result = await getCachedDistrictActivity(redis, provider, 'Madurai')
@@ -34,7 +30,7 @@ describe('getCachedDistrictActivity', () => {
   })
 
   it('serves from cache without refetching while fresh', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider()
     await getCachedDistrictActivity(redis, provider, 'Madurai')
@@ -44,7 +40,7 @@ describe('getCachedDistrictActivity', () => {
   })
 
   it('serves stale data immediately and fires a background refetch, never blocking the response', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     // Manually seed a cache entry old enough to be stale but not expired,
     // rather than waiting out the real 6h threshold.
@@ -67,7 +63,7 @@ describe('getCachedDistrictActivity', () => {
   })
 
   it('returns null when nothing is cached and the fetch itself fails', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const provider = makeProvider({ fetchDistrictActivity: vi.fn(async () => { throw new Error('agmarknet down') }) })
     const result = await getCachedDistrictActivity(redis, provider, 'Madurai')
@@ -75,7 +71,7 @@ describe('getCachedDistrictActivity', () => {
   })
 
   it('treats data older than the 48h TTL as expired, not stale — attempts a fresh fetch', async () => {
-    const redis = new RedisMock()
+    const redis = createFakeRedis()
     await redis.flushall()
     const expiredEntry = {
       snapshot: { district: 'Madurai', prices: [], fetchedAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString() },

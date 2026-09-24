@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis'
+import type { RedisLike } from './redis/types'
 
 export interface RateLimitResult {
   allowed: boolean
@@ -10,7 +10,7 @@ export interface RateLimitResult {
 // in the window. Simple and sufficient at this scale — no need for a
 // sliding-window / token-bucket implementation.
 export async function checkAndIncrement(
-  redis: Redis,
+  redis: RedisLike,
   key: string,
   limit: number,
   windowSeconds: number
@@ -35,8 +35,8 @@ export interface CooldownResult {
 
 // SET ... NX EX — a simple "may not repeat within N seconds" gate, used for
 // the OTP resend cooldown (separate from the hourly request cap above).
-export async function checkCooldown(redis: Redis, key: string, windowSeconds: number): Promise<CooldownResult> {
-  const set = await redis.set(key, '1', 'EX', windowSeconds, 'NX')
+export async function checkCooldown(redis: RedisLike, key: string, windowSeconds: number): Promise<CooldownResult> {
+  const set = await redis.set(key, '1', { ex: windowSeconds, nx: true })
   if (set === 'OK') return { allowed: true, retryAfterSeconds: 0 }
   const ttl = await redis.ttl(key)
   return { allowed: false, retryAfterSeconds: ttl > 0 ? ttl : windowSeconds }
