@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { DigipinOutOfBoundsError, encodeDigipin } from '../../ingestion/digipin/algorithm'
-import { narrateReport } from '../grounding/service'
+import { estimateFeasibilityFactors, narrateReport } from '../grounding/service'
 import { createAgmarknetProvider } from './agmarknetProvider'
 import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache'
 import { createGeocodingProvider } from './geocodingProvider'
@@ -27,7 +27,7 @@ const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
   // hangs or errors (rule 4): every signal assembleFeasibilityScore composes
   // already degrades to neutral on its own.
   fastify.post<{ Body: ScoreRequestBody }>('/score', async (request, reply) => {
-    const { businessId, districtId, blockId, locale } = request.body ?? {}
+    const { businessId, stateId, districtId, blockId, locale } = request.body ?? {}
     if (!businessId || !districtId || !blockId) {
       return reply.status(400).send({ error: { message: 'businessId, districtId, and blockId are required', code: 'BAD_REQUEST' } })
     }
@@ -41,8 +41,17 @@ const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
         redis: fastify.redis,
         agmarknetProvider,
         narrate: (input) => narrateReport({ db: fastify.db, redis: fastify.redis }, input),
+        // Only real signals are ever tried first — this is the "still
+        // nothing?" fallback for the ~every district outside the Tamil
+        // Nadu pilot that has no real ingested Census/Agmarknet/NRLM data
+        // at all (CLAUDE.md items 8+9 were deferred, so that gap is real
+        // and nationwide). See grounding/service.ts's
+        // estimateFeasibilityFactors for the honesty contract this is
+        // built under — permanently labelled 'ai_estimated', never
+        // presented as measured data.
+        estimateFactors: (context) => estimateFeasibilityFactors({ db: fastify.db, redis: fastify.redis }, context),
       },
-      { businessId, districtName: districtId, districtId: resolvedDistrictId, blockId: resolvedBlockId, locale }
+      { businessId, stateName: stateId, districtName: districtId, districtId: resolvedDistrictId, blockId: resolvedBlockId, locale }
     )
 
     return reply.status(200).send(result)

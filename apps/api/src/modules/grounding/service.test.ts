@@ -2,7 +2,7 @@ import RedisMock from 'ioredis-mock'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LlmProvider, LlmTier } from '../../llm/client'
 import type { EmbeddingProvider } from '../../llm/embeddingProvider'
-import { narrateReport, query, queryWithClaims } from './service'
+import { estimateFeasibilityFactors, narrateReport, query, queryWithClaims } from './service'
 import type { NarrationInput, QueryRequestBody } from './types'
 
 function makeLlmProvider(fn: LlmProvider['generate']): LlmProvider {
@@ -260,5 +260,87 @@ describe('queryWithClaims — the advisorSaathi seam', () => {
 
     expect(result.narrationSource).toBe('template')
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('rejected'), expect.objectContaining({ invalid: [99000] }))
+  })
+})
+
+// The one deliberate, user-approved exception to "the LLM never computes"
+// in this whole app — see promptBuilder.ts's buildFeasibilityEstimatePrompt
+// for the honesty contract, and feasibility/service.ts for the only
+// caller. Every failure mode here must degrade to null, never a
+// fabricated 0 standing in for "no basis to estimate."
+describe('estimateFeasibilityFactors', () => {
+  const context = { businessLabel: 'Dairy', stateName: 'Bihar', districtName: 'Gaya' }
+
+  it('parses a valid JSON estimate and clamps nothing that is already in range', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const llmProvider = makeLlmProvider(async () => JSON.stringify({ demand: 3, infrastructure: -2, market: 1, reasoning: 'A mid-sized district.' }))
+
+    const result = await estimateFeasibilityFactors({ db: undefined as never, redis, llmProvider }, context)
+
+    expect(result).toEqual({ demand: 3, infrastructure: -2, market: 1, reasoning: 'A mid-sized district.' })
+  })
+
+  it('tolerates a code-fenced JSON response (models sometimes wrap it despite instructions not to)', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const llmProvider = makeLlmProvider(async () => '```json\n{"demand": 2, "infrastructure": 2, "market": 2}\n```')
+
+    const result = await estimateFeasibilityFactors({ db: undefined as never, redis, llmProvider }, context)
+
+    expect(result).toEqual({ demand: 2, infrastructure: 2, market: 2, reasoning: null })
+  })
+
+  it('drops an out-of-range field to null rather than clamping it and keeping it as if the model had been careful', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    // infrastructure's real range is -6..6 — 40 is nonsense, not "very good infrastructure".
+    const llmProvider = makeLlmProvider(async () => JSON.stringify({ demand: 1, infrastructure: 40, market: -1 }))
+
+    const result = await estimateFeasibilityFactors({ db: undefined as never, redis, llmProvider }, context)
+
+    expect(result?.demand).toBe(1)
+    expect(result?.infrastructure).toBeNull()
+    expect(result?.market).toBe(-1)
+  })
+
+  it('degrades to null (never a fabricated estimate) when the response is not valid JSON', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const llmProvider = makeLlmProvider(async () => 'MOCK: (strong tier) some echoed prompt text, not JSON at all')
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await estimateFeasibilityFactors({ db: undefined as never, redis, llmProvider }, context)
+
+    expect(result).toBeNull()
+    expect(warnSpy).toHaveBeenCalled()
+  })
+
+  it('degrades to null, never blocking, when the LLM is unreachable or times out', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const llmProvider = makeLlmProvider(async () => {
+      throw new Error('unreachable')
+    })
+
+    const result = await estimateFeasibilityFactors({ db: undefined as never, redis, llmProvider }, context)
+
+    expect(result).toBeNull()
+  })
+
+  it('caches a real estimate so an identical (business, state, district) call skips the LLM entirely', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    let calls = 0
+    const llmProvider = makeLlmProvider(async () => {
+      calls += 1
+      return JSON.stringify({ demand: 1, infrastructure: 1, market: 1 })
+    })
+    const deps = { db: undefined as never, redis, llmProvider }
+
+    await estimateFeasibilityFactors(deps, context)
+    await estimateFeasibilityFactors(deps, context)
+
+    expect(calls).toBe(1)
   })
 })

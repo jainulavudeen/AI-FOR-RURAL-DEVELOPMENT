@@ -23,3 +23,12 @@ export interface DataBackedFactor {
   asOf: string | null
   datasetVersionId: string | null
 }
+
+// A factor's ultimate source once assembleFeasibilityScore decides what to
+// do with a 'neutral' DataBackedFactor: either it stays excluded, or — a
+// deliberate, user-approved exception to "the LLM never computes" — the
+// grounding module's estimateFeasibilityFactors fills it in from general
+// knowledge, permanently and visibly labelled 'ai_estimated' so it is
+// never mistaken for 'real_block'/'real_district' data anywhere it's
+// displayed.
+export type FeasibilityFactorSourceLabel = 'baseline' | 'live' | 'cached' | 'real_block' | 'real_district' | 'ai_estimated'

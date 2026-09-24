@@ -4,12 +4,21 @@ import { BASE_SCORE, DEFAULT_BASE_SCORE, classifyVerdict, clampScore } from '@se
 import type { Db } from '../../db/client'
 import { blocks, districts, informalLendingRates } from '../../db/schema'
 import { withTimeout } from '../../lib/withTimeout'
-import type { NarrationInput, NarrationResult } from '../grounding/types'
+import type { FeasibilityEstimate, NarrationInput, NarrationResult } from '../grounding/types'
+import type { FeasibilityEstimateContext } from '../grounding/promptBuilder'
 import { getCachedDistrictActivity } from './agmarknetCache'
 import type { AgmarknetProvider } from './agmarknetProvider'
 import { getInfraSignal } from './infraSignal'
 import { getShgSignal } from './shgSignal'
-import type { ScoreRequestBody } from './types'
+import type { FeasibilityFactorSourceLabel, ScoreRequestBody } from './types'
+
+function humanizeSlug(slug: string): string {
+  return slug
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
 
 // Score assembly. Today the web app's feasibility score is seeded-random
 // mock data (see CLAUDE.md, Known Gaps — apps/web/src/lib/feasibility.js).
@@ -122,7 +131,11 @@ export interface FeasibilityFactor {
   labelKey: string
   value: number
   isBaseline?: boolean
-  source: { label: string; asOf: string | null; datasetVersionId?: string | null }
+  source: { label: FeasibilityFactorSourceLabel; asOf: string | null; datasetVersionId?: string | null }
+  // Only ever set for an 'ai_estimated' factor — the model's own one-line
+  // reasoning, shown alongside the number so a user can see it's a
+  // general-knowledge guess, not a measurement.
+  note?: string | null
 }
 
 // A factor the score does NOT include, and why — CLAUDE.md item 4's
@@ -130,6 +143,8 @@ export interface FeasibilityFactor {
 // screen and exclude it from the score — do NOT silently substitute a
 // national average and present it as local." reasonKey is an i18n key,
 // not raw English, so the frontend can render it in the current language.
+// Only reached today when even the AI estimate (see estimateFactor below)
+// couldn't produce a usable value for that field.
 export interface ExcludedFactor {
   labelKey: string
   reasonKey: 'results.factorExcludedNoData'
@@ -140,6 +155,10 @@ export interface FeasibilityScoreResult {
   verdictKey: string
   factors: FeasibilityFactor[]
   excludedFactors: ExcludedFactor[]
+  // True the moment any single factor in `factors` is 'ai_estimated' — the
+  // frontend uses this to show one prominent banner rather than making
+  // the user notice it factor-by-factor.
+  usedAiEstimate: boolean
   narration: NarrationResult
 }
 
@@ -148,10 +167,15 @@ export interface AssembleFeasibilityScoreDeps {
   redis: Redis
   agmarknetProvider: AgmarknetProvider
   narrate: (input: NarrationInput) => Promise<NarrationResult>
+  // Optional deliberately — every existing caller (and every test) keeps
+  // working with real-data-or-excluded behavior unless this is supplied.
+  // See grounding/service.ts's estimateFeasibilityFactors for what this is
+  // actually wired to in routes.ts.
+  estimateFactors?: (context: FeasibilityEstimateContext) => Promise<FeasibilityEstimate | null>
 }
 
-const DEMAND_SIGNAL_LABELS: Record<string, string> = { live: 'live', cached: 'cached' }
-const INFRA_SHG_LABELS: Record<string, string> = { real_block: 'real (block-level)', real_district: 'real (district-level)' }
+const DEMAND_SIGNAL_LABELS: Record<string, FeasibilityFactorSourceLabel> = { live: 'live', cached: 'cached' }
+const INFRA_SHG_LABELS: Record<string, FeasibilityFactorSourceLabel> = { real_block: 'real_block', real_district: 'real_district' }
 
 // The real composite score — replaces apps/web's seeded-random mock
 // (CLAUDE.md: "assembles real Census / Mission Antyodaya / NRLM factors...
@@ -168,7 +192,12 @@ const INFRA_SHG_LABELS: Record<string, string> = { real_block: 'real (block-leve
 // signal it composes already degrades to neutral on its own (rule 4).
 export async function assembleFeasibilityScore(
   deps: AssembleFeasibilityScoreDeps,
-  request: Pick<ScoreRequestBody, 'businessId' | 'locale'> & { districtName: string; districtId: string | null; blockId: string | null }
+  request: Pick<ScoreRequestBody, 'businessId' | 'locale'> & {
+    districtName: string
+    stateName?: string
+    districtId: string | null
+    blockId: string | null
+  }
 ): Promise<FeasibilityScoreResult> {
   const base = BASE_SCORE[request.businessId] ?? DEFAULT_BASE_SCORE
 
@@ -183,38 +212,53 @@ export async function assembleFeasibilityScore(
   ]
   const excludedFactors: ExcludedFactor[] = []
 
-  if (demand.label === 'neutral') {
-    excludedFactors.push({ labelKey: 'results.factorDemand', reasonKey: 'results.factorExcludedNoData' })
-  } else {
-    factors.push({
-      labelKey: 'results.factorDemand',
-      value: demand.value,
-      source: { label: DEMAND_SIGNAL_LABELS[demand.label] ?? demand.label, asOf: demand.asOf },
-    })
+  // Only demand/infra/market that came back with no real signal at all
+  // are candidates for an AI estimate — a real signal, even a weak one,
+  // always wins over a guess. One batched call covers whichever of the
+  // three are actually missing, rather than three separate LLM calls.
+  const needsEstimate = demand.label === 'neutral' || infra.label === 'neutral' || shg.label === 'neutral'
+  const estimate =
+    needsEstimate && deps.estimateFactors
+      ? await deps.estimateFactors({
+          businessLabel: humanizeSlug(request.businessId),
+          stateName: request.stateName ? humanizeSlug(request.stateName) : 'India',
+          districtName: humanizeSlug(request.districtName),
+        })
+      : null
+
+  const pushFactor = (
+    labelKey: string,
+    real: { label: 'neutral' | FeasibilityFactorSourceLabel; value: number; asOf: string | null; datasetVersionId?: string | null },
+    realLabelMap: Record<string, FeasibilityFactorSourceLabel>,
+    estimatedValue: number | null | undefined
+  ) => {
+    if (real.label !== 'neutral') {
+      factors.push({
+        labelKey,
+        value: real.value,
+        source: { label: realLabelMap[real.label] ?? (real.label as FeasibilityFactorSourceLabel), asOf: real.asOf, datasetVersionId: real.datasetVersionId },
+      })
+      return
+    }
+    if (estimatedValue !== null && estimatedValue !== undefined) {
+      factors.push({
+        labelKey,
+        value: estimatedValue,
+        source: { label: 'ai_estimated', asOf: null },
+        note: estimate?.reasoning ?? null,
+      })
+      return
+    }
+    excludedFactors.push({ labelKey, reasonKey: 'results.factorExcludedNoData' })
   }
 
-  if (infra.label === 'neutral') {
-    excludedFactors.push({ labelKey: 'results.factorInfrastructure', reasonKey: 'results.factorExcludedNoData' })
-  } else {
-    factors.push({
-      labelKey: 'results.factorInfrastructure',
-      value: infra.value,
-      source: { label: INFRA_SHG_LABELS[infra.label] ?? infra.label, asOf: infra.asOf, datasetVersionId: infra.datasetVersionId },
-    })
-  }
-
-  if (shg.label === 'neutral') {
-    excludedFactors.push({ labelKey: 'results.factorMarket', reasonKey: 'results.factorExcludedNoData' })
-  } else {
-    factors.push({
-      labelKey: 'results.factorMarket',
-      value: shg.value,
-      source: { label: INFRA_SHG_LABELS[shg.label] ?? shg.label, asOf: shg.asOf, datasetVersionId: shg.datasetVersionId },
-    })
-  }
+  pushFactor('results.factorDemand', demand, DEMAND_SIGNAL_LABELS, estimate?.demand)
+  pushFactor('results.factorInfrastructure', infra, INFRA_SHG_LABELS, estimate?.infrastructure)
+  pushFactor('results.factorMarket', shg, INFRA_SHG_LABELS, estimate?.market)
 
   const score = clampScore(factors.reduce((sum, f) => sum + f.value, 0))
   const verdictKey = classifyVerdict(score)
+  const usedAiEstimate = factors.some((f) => f.source.label === 'ai_estimated')
 
   const narration = await deps.narrate({
     numbers: Object.fromEntries(factors.map((f) => [f.labelKey, f.value]).concat([['results.score', score]])),
@@ -225,5 +269,5 @@ export async function assembleFeasibilityScore(
     locale: request.locale ?? 'en',
   })
 
-  return { score, verdictKey, factors, excludedFactors, narration }
+  return { score, verdictKey, factors, excludedFactors, usedAiEstimate, narration }
 }

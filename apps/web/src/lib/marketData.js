@@ -81,8 +81,8 @@ export async function getInformalLendingRate(districtSlug) {
 // read back on failure — the same "degrade, don't error" shape as every
 // other function here, just persisted across reloads so a report already
 // viewed once stays available offline, per CLAUDE.md rule 4.
-const scoreStorageKey = (businessId, districtSlug, blockId, locale) =>
-  `setu:feasibility-score:${businessId}|${districtSlug}|${blockId}|${locale}`
+const scoreStorageKey = (businessId, stateSlug, districtSlug, blockId, locale) =>
+  `setu:feasibility-score:${businessId}|${stateSlug}|${districtSlug}|${blockId}|${locale}`
 
 function readCachedScore(key) {
   try {
@@ -102,14 +102,14 @@ function writeCachedScore(key, value) {
   }
 }
 
-export async function getFeasibilityScore(businessId, districtSlug, blockId, locale) {
+export async function getFeasibilityScore(businessId, stateSlug, districtSlug, blockId, locale) {
   if (!businessId || !districtSlug || !blockId) return null
-  const key = scoreStorageKey(businessId, districtSlug, blockId, locale)
+  const key = scoreStorageKey(businessId, stateSlug, districtSlug, blockId, locale)
   try {
     const response = await fetch(`${API_BASE}/feasibility/score`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessId, districtId: districtSlug, blockId, locale }),
+      body: JSON.stringify({ businessId, stateId: stateSlug, districtId: districtSlug, blockId, locale }),
     })
     if (!response.ok) return readCachedScore(key)
     const data = await response.json()

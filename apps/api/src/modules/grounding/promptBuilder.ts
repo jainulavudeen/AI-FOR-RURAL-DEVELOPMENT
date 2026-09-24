@@ -1,5 +1,11 @@
 import type { GroundedClaim, Locale, NarrationInput } from './types'
 
+export interface FeasibilityEstimateContext {
+  businessLabel: string
+  stateName: string
+  districtName: string
+}
+
 const LOCALE_NAME: Record<Locale, string> = { en: 'English', hi: 'Hindi', ta: 'Tamil' }
 
 const SHARED_RULES = `You explain numbers, you never invent or recalculate them. Every number in your
@@ -69,6 +75,37 @@ Retrieved eligibility context:
 ${formatClaims(claims)}
 
 Answer the question, citing sources by sourceId.`
+
+  return { system, user }
+}
+
+// The ONE place in this app where the model is deliberately asked to
+// produce a number rather than narrate one already computed — a real,
+// explicit exception to boundary rule 2, only for districts where no real
+// Census/Agmarknet/NRLM data exists at all (see feasibility/service.ts).
+// Every value it returns is permanently labelled 'ai_estimated' —
+// visually and in the API response — never merged into or presented as
+// 'real'. Strict JSON output, strict ranges the caller clamps regardless
+// of what's returned, and any parse failure degrades to "still excluded"
+// exactly like a real signal that didn't resolve.
+export function buildFeasibilityEstimatePrompt(context: FeasibilityEstimateContext): { system: string; user: string } {
+  const system = `You are estimating hyper-local business context from general knowledge, for a rural
+entrepreneur in India who has no access to official statistics for their area. You are NOT
+retrieving real data — you have none. Give your best honest general-knowledge estimate, the way
+a well-informed local business advisor would reason about a district they've heard of but don't
+have current data for. Respond with ONLY a single JSON object, no prose before or after, no
+markdown code fences, in exactly this shape:
+{"demand": <integer -7 to 7>, "infrastructure": <integer -6 to 6>, "market": <integer -5 to 5>, "reasoning": "<one short sentence in English>"}
+demand: local market demand for this business type relative to a typical Indian district (0 = typical, negative = weaker, positive = stronger).
+infrastructure: general physical/utility infrastructure access relative to a typical Indian block (roads, power, water).
+market: market linkages and community financial infrastructure (cooperatives, SHGs, formal credit access) relative to a typical Indian block.
+If you genuinely have no basis to estimate a field, use 0 rather than guessing wildly — 0 means "assume typical," not "definitely typical."`
+
+  const user = `Business type: ${context.businessLabel}
+State: ${context.stateName}
+District: ${context.districtName}
+
+Estimate demand/infrastructure/market for this business type in this district, as the JSON object described.`
 
   return { system, user }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Download, RefreshCcw, Pencil, BadgeCheck, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, Download, RefreshCcw, Pencil, BadgeCheck, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
@@ -121,13 +121,13 @@ export default function Results() {
   useEffect(() => {
     let cancelled = false
     setRealFactors(null)
-    getFeasibilityScore(selection.businessId, selection.districtId, selection.blockId, language).then((result) => {
+    getFeasibilityScore(selection.businessId, selection.stateId, selection.districtId, selection.blockId, language).then((result) => {
       if (!cancelled) setRealFactors(result)
     })
     return () => {
       cancelled = true
     }
-  }, [selection.businessId, selection.districtId, selection.blockId, language])
+  }, [selection.businessId, selection.stateId, selection.districtId, selection.blockId, language])
 
   const feasibility = useMemo(() => applyRealFactors(baseFeasibility, realFactors), [baseFeasibility, realFactors])
 
@@ -245,6 +245,13 @@ export default function Results() {
               </span>
             )}
           </div>
+
+          {feasibility.usedAiEstimate && (
+            <p className="mb-4 flex items-start gap-1.5 rounded-xl bg-purple-50 border border-purple-200 px-3 py-2.5 text-[11.5px] text-purple-800 leading-snug">
+              <Sparkles size={13} className="shrink-0 mt-0.5" />
+              {t('results.aiEstimateBanner')}
+            </p>
+          )}
 
           <RadialGauge score={feasibility.score} verdict={t(feasibility.verdictKey)} />
 

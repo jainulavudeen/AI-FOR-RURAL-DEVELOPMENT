@@ -53,3 +53,17 @@ export interface QueryResult {
   tier: LlmTier
   claims: GroundedClaim[]
 }
+
+// The model's own general-knowledge guess at demand/infrastructure/market
+// for a district with no real ingested data — see promptBuilder.ts's
+// buildFeasibilityEstimatePrompt for why this is a deliberate, narrow
+// exception to "the LLM never computes." Each field is null if the model's
+// response didn't parse, was out of range, or the call failed/timed out —
+// feasibility/service.ts treats a null field exactly like "still excluded,"
+// never a fabricated 0 standing in for a real absence.
+export interface FeasibilityEstimate {
+  demand: number | null
+  infrastructure: number | null
+  market: number | null
+  reasoning: string | null
+}

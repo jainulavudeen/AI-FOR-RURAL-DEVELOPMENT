@@ -197,6 +197,7 @@ export function applyRealFactors(feasibility, real) {
     verdictKey: real.verdictKey,
     factors: real.factors,
     excludedFactors: real.excludedFactors ?? [],
+    usedAiEstimate: Boolean(real.usedAiEstimate),
     narration: real.narration,
     isEstimate: false,
   }

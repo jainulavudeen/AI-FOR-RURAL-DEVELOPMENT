@@ -1,5 +1,5 @@
 import RedisMock from 'ioredis-mock'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { villageAmenities, villages } from '../../db/schema'
 import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
 import { assembleFeasibilityScore, findDistrictIdByName, getInformalLendingRate, getLocalDemandSignal } from './service'
@@ -169,6 +169,91 @@ describe('assembleFeasibilityScore', () => {
     expect(infraFactor).toBeDefined()
     expect(infraFactor?.source.label).toContain('real')
     expect(infraFactor?.source.datasetVersionId).toBe('v1')
+  })
+
+  it('fills a factor with an AI estimate, clearly labelled, when no real signal exists at all for that district', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const provider = makeProvider(async () => {
+      throw new Error('agmarknet down')
+    })
+    const narrate = async () => ({ text: 'ok', narrationSource: 'llm' as const, tier: 'fast' as const })
+    // db: {} — no villages/blocks/shg tables answer anything, so infra and
+    // shg are genuinely neutral too, same as a district outside the Tamil
+    // Nadu pilot with zero real ingested data.
+    const estimateFactors = async () => ({ demand: 3, infrastructure: -2, market: 1, reasoning: 'General knowledge estimate.' })
+
+    const result = await assembleFeasibilityScore(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { db: {} as any, redis, agmarknetProvider: provider, narrate, estimateFactors },
+      { businessId: 'dairy', districtName: 'SomeDistrict', districtId: null, blockId: null }
+    )
+
+    expect(result.usedAiEstimate).toBe(true)
+    expect(result.excludedFactors).toHaveLength(0)
+
+    const demandFactor = result.factors.find((f) => f.labelKey === 'results.factorDemand')
+    expect(demandFactor?.value).toBe(3)
+    expect(demandFactor?.source.label).toBe('ai_estimated')
+    expect(demandFactor?.note).toBe('General knowledge estimate.')
+
+    const infraFactor = result.factors.find((f) => f.labelKey === 'results.factorInfrastructure')
+    expect(infraFactor?.value).toBe(-2)
+    expect(infraFactor?.source.label).toBe('ai_estimated')
+
+    // Score = baseline(78) + 3 - 2 + 1 = 80, real math, AI values included.
+    expect(result.score).toBe(80)
+  })
+
+  it('never calls the AI estimator for a factor that already has real data — real always wins over a guess', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const provider = makeProvider(async (district) => ({
+      district,
+      prices: [{ commodity: 'Paddy', market: 'M', modalPrice: 2000, arrivalDate: '2026-01-01' }],
+      fetchedAt: new Date().toISOString(),
+    }))
+    const narrate = async () => ({ text: 'ok', narrationSource: 'llm' as const, tier: 'fast' as const })
+    const estimateFactors = vi.fn(async () => ({ demand: 7, infrastructure: 6, market: 5, reasoning: null }))
+
+    const result = await assembleFeasibilityScore(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { db: {} as any, redis, agmarknetProvider: provider, narrate, estimateFactors },
+      { businessId: 'dairy', districtName: 'Madurai', districtId: null, blockId: null }
+    )
+
+    // demand resolved for real (the mocked Agmarknet provider above);
+    // infra/shg are still neutral (db: {}) and get AI-filled.
+    const demandFactor = result.factors.find((f) => f.labelKey === 'results.factorDemand')
+    expect(demandFactor?.source.label).not.toBe('ai_estimated')
+
+    const infraFactor = result.factors.find((f) => f.labelKey === 'results.factorInfrastructure')
+    expect(infraFactor?.source.label).toBe('ai_estimated')
+    expect(infraFactor?.value).toBe(6)
+  })
+
+  it('leaves a factor excluded, not fabricated, when even the AI estimate has nothing for that field', async () => {
+    const redis = new RedisMock()
+    await redis.flushall()
+    const provider = makeProvider(async () => {
+      throw new Error('agmarknet down')
+    })
+    const narrate = async () => ({ text: 'ok', narrationSource: 'llm' as const, tier: 'fast' as const })
+    // The estimator itself degrades one field to null (e.g. it was out of
+    // range) — that field must stay excluded, never become a fabricated 0.
+    const estimateFactors = async () => ({ demand: 2, infrastructure: null, market: null, reasoning: null })
+
+    const result = await assembleFeasibilityScore(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { db: {} as any, redis, agmarknetProvider: provider, narrate, estimateFactors },
+      { businessId: 'dairy', districtName: 'SomeDistrict', districtId: null, blockId: null }
+    )
+
+    expect(result.factors.some((f) => f.labelKey === 'results.factorInfrastructure')).toBe(false)
+    expect(result.factors.some((f) => f.labelKey === 'results.factorMarket')).toBe(false)
+    expect(result.excludedFactors.map((f) => f.labelKey)).toEqual(
+      expect.arrayContaining(['results.factorInfrastructure', 'results.factorMarket'])
+    )
   })
 })
 
