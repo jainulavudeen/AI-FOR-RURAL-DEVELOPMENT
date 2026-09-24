@@ -41,7 +41,7 @@ function AppealRow({ appeal, t, onSaved }) {
   const [status, setStatus] = useState(appeal.status)
   const [note, setNote] = useState(appeal.resolutionNote || '')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState(null) // null | { reason: string|null, offline: boolean }
 
   const business = BUSINESS_TYPES.find((b) => b.id === appeal.report?.inputs?.businessId)
   const districtObj = LOCATIONS[appeal.report?.inputs?.stateId]?.districts.find((d) => d.id === appeal.report?.inputs?.districtId)
@@ -50,14 +50,19 @@ function AppealRow({ appeal, t, onSaved }) {
 
   const handleSave = async () => {
     setSaving(true)
-    setError(false)
+    setError(null)
     const result = await updateAppeal(appeal.id, { status, resolutionNote: note })
     setSaving(false)
     if (result.ok) {
       setExpanded(false)
       onSaved(result.data)
+    } else if (result.status === 0) {
+      // A thrown fetch (offline, DNS failure, or a blocked CORS
+      // preflight) never reaches the server at all — status 0, no body.
+      // Distinct from a real server-side rejection below.
+      setError({ reason: null, offline: true })
     } else {
-      setError(true)
+      setError({ reason: result.data?.error?.message ?? null, offline: false })
     }
   }
 
@@ -133,7 +138,15 @@ function AppealRow({ appeal, t, onSaved }) {
                 </button>
               </div>
             </div>
-            {error && <p className="mt-2 text-[11px] text-red-600">{t('officer.saveError')}</p>}
+            {error && (
+              <p className="mt-2 text-[11px] text-red-600">
+                {error.offline
+                  ? t('officer.saveErrorOffline')
+                  : error.reason
+                    ? t('officer.saveErrorReason', { reason: error.reason })
+                    : t('officer.saveError')}
+              </p>
+            )}
           </td>
         </tr>
       )}

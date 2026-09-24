@@ -911,6 +911,8 @@ const en = {
     save: 'Save',
     saving: 'Saving…',
     saveError: "Couldn't save — please try again.",
+    saveErrorReason: "Couldn't save: {{reason}}",
+    saveErrorOffline: "Couldn't reach the server — check your connection and try again.",
   },
   footer: {
     tagline: 'Setu is a bridge between rural entrepreneurship and formal financial structuring.',
@@ -1910,6 +1912,8 @@ const hi = {
     save: 'सहेजें',
     saving: 'सहेजा जा रहा है…',
     saveError: 'सहेजा नहीं जा सका — कृपया फिर से प्रयास करें।',
+    saveErrorReason: 'सहेजा नहीं जा सका: {{reason}}',
+    saveErrorOffline: 'सर्वर तक नहीं पहुँच सके — अपना कनेक्शन जाँचें और फिर से प्रयास करें।',
   },
   footer: {
     tagline: 'सेतु ग्रामीण उद्यमिता और औपचारिक वित्तीय संरचना के बीच एक सेतु है।',
@@ -2909,6 +2913,8 @@ const ta = {
     save: 'சேமி',
     saving: 'சேமிக்கப்படுகிறது…',
     saveError: 'சேமிக்க முடியவில்லை — மீண்டும் முயற்சிக்கவும்.',
+    saveErrorReason: 'சேமிக்க முடியவில்லை: {{reason}}',
+    saveErrorOffline: 'சர்வரை அடைய முடியவில்லை — உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.',
   },
   footer: {
     tagline: 'சேது கிராமப்புற தொழில்முனைவுக்கும் முறையான நிதி கட்டமைப்புக்கும் இடையேயான ஒரு பாலமாகும்.',

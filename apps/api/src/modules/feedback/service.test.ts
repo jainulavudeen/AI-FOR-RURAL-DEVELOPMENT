@@ -217,6 +217,33 @@ describe('updateAppealStatus', () => {
       NotFoundError
     )
   })
+
+  it('persists a status change so a later, independent read sees it (not just the write echoing it back)', async () => {
+    // A stateful store, not a canned stub — getAppealById reads from the
+    // same object updateAppeal writes to, the way a real DB round-trip
+    // would, so this actually proves persistence rather than just that
+    // updateAppealStatus's own return value matches its input.
+    const store = new Map<string, Appeal>([['appeal-1', makeAppeal({ assignedOfficerId: 'officer-1' })]])
+    const deps = makeDeps({
+      getAppealById: async (id) => store.get(id) ?? null,
+      updateAppeal: async (id, body) => {
+        const current = store.get(id)
+        if (!current) throw new NotFoundError('Appeal not found')
+        const updated = { ...current, status: body.status, resolutionNote: body.resolutionNote ?? null }
+        store.set(id, updated)
+        return updated
+      },
+    })
+
+    await updateAppealStatus(deps, 'officer', 'officer-1', 'appeal-1', {
+      status: 'in_review',
+      resolutionNote: 'Requested bank statement for verification.',
+    })
+
+    const reRead = await deps.getAppealById('appeal-1')
+    expect(reRead?.status).toBe('in_review')
+    expect(reRead?.resolutionNote).toBe('Requested bank statement for verification.')
+  })
 })
 
 describe('applicantEscalateAppeal', () => {
