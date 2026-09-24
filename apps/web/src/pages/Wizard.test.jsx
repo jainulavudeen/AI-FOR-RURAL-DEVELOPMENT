@@ -1,19 +1,54 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { I18nProvider } from '../i18n/I18nContext'
 import { AppDataProvider, useAppData } from '../context/AppDataContext'
-import { LOCATIONS, STATE_IDS } from '../data/locations'
+import * as geography from '../lib/geography'
 import Wizard from './Wizard'
 
-// Bug report: "selecting Coimbatore does nothing, even though Coimbatore is
-// in the list." Investigation found the state/district/block cascade
-// itself (this file, data/locations.js) has no id/value mismatch anywhere
-// — the real defect was a GPS race condition, covered separately in
-// LocationDigipin.test.jsx. This test exhaustively drives every state and
-// district in the dataset through the real dropdowns and asserts the
-// selection actually updates each time, so a future regression in the
-// cascade itself (not just the GPS race) gets caught here.
+// Bug report (earlier session): "selecting Coimbatore does nothing, even
+// though Coimbatore is in the list." That was a race condition in the GPS
+// flow, covered separately in LocationDigipin.test.jsx — this file drives
+// the plain state -> district -> block cascade itself. Rewritten when the
+// Wizard moved from a static 8-state mock catalogue to real, API-backed
+// nationwide geography (lib/geography.js) — the fixture below stands in
+// for GET /geography/states|districts|blocks so this stays a fast, real
+// component test with no network dependency.
+
+const FIXTURE = {
+  tamil_nadu: {
+    name: 'Tamil Nadu',
+    districts: {
+      madurai: { uuid: 'uuid-madurai', name: 'Madurai', blocks: [{ id: 'melur', name: 'Melur' }, { id: 'usilampatti', name: 'Usilampatti' }] },
+      coimbatore: { uuid: 'uuid-coimbatore', name: 'Coimbatore', blocks: [{ id: 'mettupalayam', name: 'Mettupalayam' }] },
+    },
+  },
+  uttar_pradesh: {
+    name: 'Uttar Pradesh',
+    districts: {
+      saharanpur: { uuid: 'uuid-saharanpur', name: 'Saharanpur', blocks: [{ id: 'behat', name: 'Behat' }, { id: 'nakur', name: 'Nakur' }] },
+    },
+  },
+}
+
+function stubGeography() {
+  vi.spyOn(geography, 'getStates').mockResolvedValue(
+    Object.entries(FIXTURE).map(([id, s]) => ({ id, name: s.name }))
+  )
+  vi.spyOn(geography, 'getDistricts').mockImplementation(async (stateId) => {
+    const state = FIXTURE[stateId]
+    if (!state) return []
+    return Object.entries(state.districts).map(([id, d]) => ({ id, uuid: d.uuid, name: d.name }))
+  })
+  vi.spyOn(geography, 'getBlocks').mockImplementation(async (districtUuid) => {
+    for (const state of Object.values(FIXTURE)) {
+      for (const district of Object.values(state.districts)) {
+        if (district.uuid === districtUuid) return district.blocks
+      }
+    }
+    return []
+  })
+}
 
 function SelectionProbe() {
   const { selection } = useAppData()
@@ -46,56 +81,77 @@ function probeValue() {
   return screen.getByTestId('selection-probe').textContent
 }
 
-describe('Wizard location step: every state/district in the dataset', () => {
-  let brokenCombos = []
-
+describe('Wizard location step: real nationwide geography, every fixture state/district/block', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     // getBusinessTypes() would otherwise hit the real dev API at
     // localhost:4000 — irrelevant to this test and a source of flakiness.
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.reject(new Error('network disabled in test')))
-    )
-    brokenCombos = []
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network disabled in test'))))
+    stubGeography()
   })
 
-  it('accepts every state -> district -> block selection in the mock catalogue', () => {
+  it('loads real states, then cascades through every district and block for each, updating the selection', async () => {
     renderWizard()
-    const { stateSelect, districtSelect, blockSelect } = getSelects()
+    const { stateSelect } = getSelects()
 
-    for (const stateId of STATE_IDS) {
+    await waitFor(() => expect(screen.getAllByRole('option', { name: /Tamil Nadu|Uttar Pradesh/ }).length).toBeGreaterThan(0))
+
+    const brokenCombos = []
+
+    for (const [stateId, state] of Object.entries(FIXTURE)) {
       fireEvent.change(stateSelect, { target: { value: stateId } })
-      if (probeValue().split('|')[0] !== stateId) brokenCombos.push(`state:${stateId}`)
+      await waitFor(() => expect(probeValue().split('|')[0]).toBe(stateId))
 
-      for (const district of LOCATIONS[stateId].districts) {
-        fireEvent.change(districtSelect, { target: { value: district.id } })
+      const { districtSelect } = getSelects()
+      await waitFor(() => expect(districtSelect).not.toBeDisabled())
+
+      for (const [districtId, district] of Object.entries(state.districts)) {
+        fireEvent.change(districtSelect, { target: { value: districtId } })
         const [gotState, gotDistrict] = probeValue().split('|')
-        if (gotState !== stateId || gotDistrict !== district.id) {
-          brokenCombos.push(`${stateId}/${district.id}`)
+        if (gotState !== stateId || gotDistrict !== districtId) {
+          brokenCombos.push(`${stateId}/${districtId}`)
           continue
         }
+
+        const { blockSelect } = getSelects()
+        await waitFor(() => expect(blockSelect).not.toBeDisabled())
 
         for (const block of district.blocks) {
           fireEvent.change(blockSelect, { target: { value: block.id } })
           const [, , gotBlock] = probeValue().split('|')
-          if (gotBlock !== block.id) brokenCombos.push(`${stateId}/${district.id}/${block.id}`)
+          if (gotBlock !== block.id) brokenCombos.push(`${stateId}/${districtId}/${block.id}`)
         }
       }
     }
 
-    const totalDistricts = STATE_IDS.reduce((sum, id) => sum + LOCATIONS[id].districts.length, 0)
-    // eslint-disable-next-line no-console
-    console.log(`Wizard location cascade: ${totalDistricts} districts tested across ${STATE_IDS.length} states, ${brokenCombos.length} broken.`)
     expect(brokenCombos).toEqual([])
   })
 
-  it('specifically accepts Coimbatore (the reported case)', () => {
+  it('specifically accepts Coimbatore (the originally reported case)', async () => {
     renderWizard()
-    const { stateSelect, districtSelect } = getSelects()
+    const { stateSelect } = getSelects()
 
+    await waitFor(() => expect(screen.getAllByRole('option', { name: /Tamil Nadu/ }).length).toBeGreaterThan(0))
     fireEvent.change(stateSelect, { target: { value: 'tamil_nadu' } })
+
+    const { districtSelect } = getSelects()
+    await waitFor(() => expect(districtSelect).not.toBeDisabled())
     fireEvent.change(districtSelect, { target: { value: 'coimbatore' } })
 
-    expect(probeValue()).toBe('tamil_nadu|coimbatore|')
+    await waitFor(() => expect(probeValue()).toBe('tamil_nadu|coimbatore|'))
+  })
+
+  it('shows a real block name, not a numbered placeholder, in the block dropdown', async () => {
+    renderWizard()
+    const { stateSelect } = getSelects()
+
+    await waitFor(() => expect(screen.getAllByRole('option', { name: /Tamil Nadu/ }).length).toBeGreaterThan(0))
+    fireEvent.change(stateSelect, { target: { value: 'tamil_nadu' } })
+    const { districtSelect } = getSelects()
+    await waitFor(() => expect(districtSelect).not.toBeDisabled())
+    fireEvent.change(districtSelect, { target: { value: 'madurai' } })
+
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Melur' })).toBeInTheDocument())
+    expect(screen.queryByRole('option', { name: /^Block \d/ })).not.toBeInTheDocument()
   })
 })

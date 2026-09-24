@@ -6,15 +6,15 @@
 // — this never computes or estimates anything itself (THE NON-NEGOTIABLE
 // BOUNDARY, CLAUDE.md rule 1/2: narration only narrates numbers the
 // calculator already produced).
-export function buildReportNarration(t, { business, feasibility, finance, schedule, stateLabelKey, districtLabelKey, blockLabelKey }) {
+export function buildReportNarration(t, { business, feasibility, finance, schedule, stateName, districtName, blockName }) {
   const sentences = []
 
   sentences.push(
     t('narration.intro', {
       business: t(business.labelKey),
-      block: t(blockLabelKey),
-      district: t(districtLabelKey),
-      state: t(stateLabelKey),
+      block: blockName,
+      district: districtName,
+      state: stateName,
     })
   )
 

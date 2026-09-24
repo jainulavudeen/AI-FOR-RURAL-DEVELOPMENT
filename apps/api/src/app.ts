@@ -15,6 +15,7 @@ import calculatorModule from './modules/calculator'
 import creditScoreModule from './modules/creditScore'
 import feasibilityModule from './modules/feasibility'
 import feedbackModule from './modules/feedback'
+import geographyModule from './modules/geography'
 import groundingModule from './modules/grounding'
 import ledgerModule from './modules/ledger'
 import notificationModule from './modules/notification'
@@ -23,15 +24,18 @@ import siteCaptureModule from './modules/siteCapture'
 import ussdModule from './modules/ussd'
 
 // One deployable unit — six original modules plus accountAggregator,
-// siteCapture, ussd, ledger, creditScore, advisorSaathi, bankDossier, and
-// now admin, deliberate exceptions (see CLAUDE.md: consented external
-// data acquisition, geotagged evidence capture, a non-smartphone access
-// rail, a daily-use transaction ledger, an explainable alternative-credit
-// score, a grounded chat advisor, a frozen-snapshot printable document,
-// and now a read-only oversight role above officer — admin never writes
-// anything except reassigning an appeal's officer, see
-// modules/admin/service.ts), none of which semantically belong inside any
-// of the original six. advisorSaathi never imports llm/client.ts itself — only
+// siteCapture, ussd, ledger, creditScore, advisorSaathi, bankDossier,
+// admin, and now geography, deliberate exceptions (see CLAUDE.md:
+// consented external data acquisition, geotagged evidence capture, a
+// non-smartphone access rail, a daily-use transaction ledger, an
+// explainable alternative-credit score, a grounded chat advisor, a
+// frozen-snapshot printable document, a read-only oversight role above
+// officer — admin never writes anything except reassigning an appeal's
+// officer, see modules/admin/service.ts — and now real nationwide
+// administrative reference data (states/districts/blocks by real Census
+// name, replacing the old 8-state mock catalogue and numbered
+// placeholders — see ingestion/adminHierarchy/), none of which
+// semantically belong inside any of the original six. advisorSaathi never imports llm/client.ts itself — only
 // grounding/service.ts may (boundary rule 2) — it calls that module's
 // queryWithClaims() export instead, a plain function call within this one
 // deployable unit, not a network hop.
@@ -50,6 +54,7 @@ export function buildApp(): FastifyInstance {
   app.register(adminModule, { prefix: '/admin' })
   app.register(calculatorModule, { prefix: '/calculator' })
   app.register(feasibilityModule, { prefix: '/feasibility' })
+  app.register(geographyModule, { prefix: '/geography' })
   app.register(schemeRouterModule, { prefix: '/scheme-router' })
   app.register(groundingModule, { prefix: '/grounding' })
   app.register(notificationModule, { prefix: '/notification' })

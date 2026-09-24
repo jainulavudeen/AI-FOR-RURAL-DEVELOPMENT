@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, MapPin, IndianRupee, ArrowRight, ArrowLeft } from 'lucide-react'
+import { ChevronDown, MapPin, IndianRupee, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAppData } from '../context/AppDataContext'
-import { LOCATIONS, STATE_IDS } from '../data/locations'
+import { getStates, getDistricts, getBlocks } from '../lib/geography'
 import { BUSINESS_TYPES } from '../data/businesses'
 import { getBusinessTypes } from '../lib/businessTypes'
 import { SOCIAL_CATEGORIES } from '@setu/core'
@@ -57,15 +57,69 @@ export default function Wizard() {
     }
   }, [])
 
-  const districts = useMemo(
-    () => (selection.stateId ? LOCATIONS[selection.stateId]?.districts ?? [] : []),
-    [selection.stateId]
-  )
+  // Real, nationwide administrative data (GET /geography/*, see
+  // lib/geography.js) — 35 states, 628 districts, ~5,900 real blocks by
+  // Census name, replacing the old 8-state mock catalogue and its
+  // numbered block_1/block_2/block_3 placeholders. Each level loads only
+  // once its parent is chosen, cached in localStorage so a device that's
+  // loaded its own state once keeps working offline after that
+  // (CLAUDE.md rule 4). `statesError`/`districtsError` distinguish
+  // "still loading" from "genuinely couldn't load anything, including
+  // from cache" — shown honestly rather than a silently empty dropdown.
+  const [states, setStates] = useState([])
+  const [statesLoading, setStatesLoading] = useState(true)
+  useEffect(() => {
+    let cancelled = false
+    getStates().then((result) => {
+      if (!cancelled) {
+        setStates(result)
+        setStatesLoading(false)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  const blocks = useMemo(
-    () => districts.find((d) => d.id === selection.districtId)?.blocks ?? [],
-    [districts, selection.districtId]
-  )
+  const [districts, setDistricts] = useState([])
+  const [districtsLoading, setDistrictsLoading] = useState(false)
+  useEffect(() => {
+    if (!selection.stateId) {
+      setDistricts([])
+      return
+    }
+    let cancelled = false
+    setDistrictsLoading(true)
+    getDistricts(selection.stateId).then((result) => {
+      if (cancelled) return
+      setDistricts(result)
+      setDistrictsLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [selection.stateId])
+
+  const selectedDistrict = useMemo(() => districts.find((d) => d.id === selection.districtId) ?? null, [districts, selection.districtId])
+
+  const [blocks, setBlocks] = useState([])
+  const [blocksLoading, setBlocksLoading] = useState(false)
+  useEffect(() => {
+    if (!selectedDistrict) {
+      setBlocks([])
+      return
+    }
+    let cancelled = false
+    setBlocksLoading(true)
+    getBlocks(selectedDistrict.uuid).then((result) => {
+      if (cancelled) return
+      setBlocks(result)
+      setBlocksLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedDistrict])
 
   const stepLabels = [t('wizard.progressStep1'), t('wizard.progressStep2'), t('wizard.progressStep3')]
 
@@ -110,19 +164,26 @@ export default function Wizard() {
   }
 
   // Extends voice input past the margin field: fuzzy-matches a spoken
-  // district name against every district across every state (block/village
-  // names in this app's mock data are generic placeholders shared
-  // identically across every district — see data/locations.js — so voice
-  // input targets the district, the finest layer voice can meaningfully
-  // disambiguate; block selection stays a tap, same as it already was).
-  // A miss (match === null) is silently ignored — the select dropdowns are
-  // always there as the fallback, per CLAUDE.md's feature-detect posture.
+  // name against real state names first; once a state is selected, also
+  // tries the real districts loaded for it. Block-level voice input stays
+  // a tap, not spoken — with ~5,900 real blocks nationwide (vs. the old
+  // mock catalogue's tiny fixed list), prefetching every block name to
+  // flatten for matching isn't practical, and block selection was never
+  // voice-driven even before this. A miss (match === null) is silently
+  // ignored — the select dropdowns are always there as the fallback, per
+  // CLAUDE.md's feature-detect posture.
   const handleLocationVoiceResult = (transcript) => {
-    const flatDistricts = STATE_IDS.flatMap((stateId) =>
-      LOCATIONS[stateId].districts.map((d) => ({ stateId, districtId: d.id, label: t(d.labelKey) }))
-    )
-    const match = matchSpokenOption(transcript, flatDistricts, (d) => d.label)
-    if (match) updateSelection({ stateId: match.stateId, districtId: match.districtId, blockId: '' })
+    if (selection.stateId && districts.length > 0) {
+      const districtMatch = matchSpokenOption(transcript, districts, (d) => d.name)
+      if (districtMatch) {
+        updateSelection({ districtId: districtMatch.id, districtName: districtMatch.name, blockId: '', blockName: '' })
+        return
+      }
+    }
+    const stateMatch = matchSpokenOption(transcript, states, (s) => s.name)
+    if (stateMatch) {
+      updateSelection({ stateId: stateMatch.id, stateName: stateMatch.name, districtId: '', districtName: '', blockId: '', blockName: '' })
+    }
   }
 
   const handleBusinessVoiceResult = (transcript) => {
@@ -160,18 +221,38 @@ export default function Wizard() {
                   <VoiceInputButton onResult={handleLocationVoiceResult} className="h-8 w-8" />
                 </div>
 
+                {states.length === 0 && !statesLoading && (
+                  <p className="mt-4 flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-[12.5px] text-amber-800">
+                    <AlertCircle size={13} className="shrink-0" />
+                    {t('wizard.locationLoadError')}
+                  </p>
+                )}
+
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-5">
                   <div>
                     <label className="block text-sm font-medium text-primary-900 mb-2">{t('wizard.stateLabel')}</label>
                     <div className="relative">
                       <select
                         value={selection.stateId}
-                        onChange={(e) => updateSelection({ stateId: e.target.value, districtId: '', blockId: '' })}
-                        className="w-full appearance-none rounded-xl border border-primary-200 bg-white px-4 py-3 text-[15px] text-ink-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+                        onChange={(e) => {
+                          const match = states.find((s) => s.id === e.target.value)
+                          updateSelection({
+                            stateId: e.target.value,
+                            stateName: match?.name ?? '',
+                            districtId: '',
+                            districtName: '',
+                            blockId: '',
+                            blockName: '',
+                          })
+                        }}
+                        disabled={statesLoading && states.length === 0}
+                        className="w-full appearance-none rounded-xl border border-primary-200 bg-white px-4 py-3 text-[15px] text-ink-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent disabled:bg-primary-50 disabled:text-ink-900/30"
                       >
-                        <option value="" disabled>{t('wizard.statePlaceholder')}</option>
-                        {STATE_IDS.map((id) => (
-                          <option key={id} value={id}>{t(LOCATIONS[id].labelKey)}</option>
+                        <option value="" disabled>
+                          {statesLoading && states.length === 0 ? t('common.loading') : t('wizard.statePlaceholder')}
+                        </option>
+                        {states.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
                       </select>
                       <ChevronDown size={18} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-primary-400" />
@@ -183,13 +264,18 @@ export default function Wizard() {
                     <div className="relative">
                       <select
                         value={selection.districtId}
-                        onChange={(e) => updateSelection({ districtId: e.target.value, blockId: '' })}
-                        disabled={!selection.stateId}
+                        onChange={(e) => {
+                          const match = districts.find((d) => d.id === e.target.value)
+                          updateSelection({ districtId: e.target.value, districtName: match?.name ?? '', blockId: '', blockName: '' })
+                        }}
+                        disabled={!selection.stateId || districtsLoading}
                         className="w-full appearance-none rounded-xl border border-primary-200 bg-white px-4 py-3 text-[15px] text-ink-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent disabled:bg-primary-50 disabled:text-ink-900/30"
                       >
-                        <option value="" disabled>{t('wizard.districtPlaceholder')}</option>
+                        <option value="" disabled>
+                          {districtsLoading ? t('common.loading') : t('wizard.districtPlaceholder')}
+                        </option>
                         {districts.map((d) => (
-                          <option key={d.id} value={d.id}>{t(d.labelKey)}</option>
+                          <option key={d.id} value={d.id}>{d.name}</option>
                         ))}
                       </select>
                       <ChevronDown size={18} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-primary-400" />
@@ -201,13 +287,18 @@ export default function Wizard() {
                     <div className="relative">
                       <select
                         value={selection.blockId}
-                        onChange={(e) => updateSelection({ blockId: e.target.value })}
-                        disabled={!selection.districtId}
+                        onChange={(e) => {
+                          const match = blocks.find((b) => b.id === e.target.value)
+                          updateSelection({ blockId: e.target.value, blockName: match?.name ?? '' })
+                        }}
+                        disabled={!selection.districtId || blocksLoading}
                         className="w-full appearance-none rounded-xl border border-primary-200 bg-white px-4 py-3 text-[15px] text-ink-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent disabled:bg-primary-50 disabled:text-ink-900/30"
                       >
-                        <option value="" disabled>{t('wizard.blockPlaceholder')}</option>
+                        <option value="" disabled>
+                          {blocksLoading ? t('common.loading') : t('wizard.blockPlaceholder')}
+                        </option>
                         {blocks.map((b) => (
-                          <option key={b.id} value={b.id}>{t(b.labelKey)}</option>
+                          <option key={b.id} value={b.id}>{b.name}</option>
                         ))}
                       </select>
                       <ChevronDown size={18} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-primary-400" />
@@ -221,7 +312,9 @@ export default function Wizard() {
                   selectedDistrictId={selection.districtId}
                   onPinned={({ digipin, lat, lon }) => updateSelection({ digipin, digipinLat: lat, digipinLon: lon })}
                   onClear={() => updateSelection({ digipin: '', digipinLat: null, digipinLon: null })}
-                  onLocationResolved={({ stateId, districtId }) => updateSelection({ stateId, districtId, blockId: '' })}
+                  onLocationResolved={({ stateId, stateName, districtId, districtName }) =>
+                    updateSelection({ stateId, stateName, districtId, districtName, blockId: '', blockName: '' })
+                  }
                 />
               </div>
             )}

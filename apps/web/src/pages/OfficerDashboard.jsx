@@ -5,7 +5,7 @@ import { SCHEMES } from '@setu/core'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { getOfficerQueue, updateAppeal } from '../lib/feedback'
-import { LOCATIONS } from '../data/locations'
+import { humanizeSlug } from '../lib/slug'
 import { BUSINESS_TYPES } from '../data/businesses'
 import Skeleton from '../components/Skeleton'
 
@@ -44,8 +44,13 @@ function AppealRow({ appeal, t, onSaved }) {
   const [error, setError] = useState(null) // null | { reason: string|null, offline: boolean }
 
   const business = BUSINESS_TYPES.find((b) => b.id === appeal.report?.inputs?.businessId)
-  const districtObj = LOCATIONS[appeal.report?.inputs?.stateId]?.districts.find((d) => d.id === appeal.report?.inputs?.districtId)
-  const blockObj = districtObj?.blocks.find((b) => b.id === appeal.report?.inputs?.blockId)
+  // Prefers the real name saved alongside the report's inputs (every
+  // report generated after real nationwide geography landed carries
+  // stateName/districtName/blockName — see Wizard.jsx); humanizes the
+  // slug as a fallback for an older report saved before that.
+  const inputs = appeal.report?.inputs
+  const districtLabel = inputs?.districtId ? inputs.districtName || humanizeSlug(inputs.districtId) : null
+  const blockLabel = inputs?.blockId ? inputs.blockName || humanizeSlug(inputs.blockId) : null
   const scheme = appeal.report ? SCHEMES[appeal.report.matchedSchemeId] : null
 
   const handleSave = async () => {
@@ -75,7 +80,7 @@ function AppealRow({ appeal, t, onSaved }) {
         </td>
         <td className="px-5 py-4 text-ink-900/70">{business ? t(business.labelKey) : '—'}</td>
         <td className="px-5 py-4 text-ink-900/70">
-          {blockObj && districtObj ? `${t(blockObj.labelKey)}, ${t(districtObj.labelKey)}` : '—'}
+          {blockLabel && districtLabel ? `${blockLabel}, ${districtLabel}` : '—'}
         </td>
         <td className={`px-5 py-4 font-bold ${appeal.report ? scoreColor(appeal.report.score) : ''}`}>
           {appeal.report ? appeal.report.score : '—'}

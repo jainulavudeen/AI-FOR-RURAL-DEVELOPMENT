@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
 import { generateBankDossier, getBankDossier, approveBankDossier } from '../lib/bankDossier'
 import { formatINR } from '../lib/format'
-import { LOCATIONS } from '../data/locations'
+import { humanizeSlug } from '../lib/slug'
 import { BUSINESS_TYPES } from '../data/businesses'
 import '../styles/print.css'
 
@@ -225,9 +225,13 @@ function ApprovalPanel({ dossierId, t, onApproved }) {
 
 function DossierView({ dossier, t, language, isOfficer, onApproved }) {
   const s = dossier.snapshot
-  const stateLabel = s.stateId ? t(LOCATIONS[s.stateId]?.labelKey ?? '') : ''
-  const districtObj = s.stateId ? LOCATIONS[s.stateId]?.districts.find((d) => d.id === s.districtId) : null
-  const districtLabel = districtObj ? t(districtObj.labelKey) : ''
+  // Real nationwide names — the dossier snapshot only freezes ids
+  // (DossierSnapshot has no name fields), so this humanizes the slug
+  // client-side (e.g. "madurai_north" -> "Madurai North"), the same
+  // transform apps/api's geography routes apply server-side for the
+  // dropdowns themselves, not a guess.
+  const stateLabel = s.stateId ? humanizeSlug(s.stateId) : ''
+  const districtLabel = s.districtId ? humanizeSlug(s.districtId) : ''
   const business = BUSINESS_TYPES.find((b) => b.id === s.businessId)
 
   const monthlyDebtServiceHeadroom = s.financial.summary.netSurplus / Math.max(1, s.financial.summary.monthBuckets.length)

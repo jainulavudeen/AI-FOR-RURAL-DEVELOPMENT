@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { getOfficerStats, getAdminReports, getAdminAppeals, reassignAppeal, getAuditLog } from '../lib/admin'
 import { LOCATIONS, STATE_IDS } from '../data/locations'
+import { humanizeSlug } from '../lib/slug'
 
 const STATUS_OPTIONS = ['pending', 'assigned', 'in_review', 'resolved', 'rejected', 'escalated']
 
@@ -25,9 +26,15 @@ const TABS = [
 
 const ALL_DISTRICTS = STATE_IDS.flatMap((stateId) => LOCATIONS[stateId].districts.map((d) => ({ ...d, stateId })))
 
+// The district FILTER dropdown still lists only the old 8-state mock
+// catalogue's districts (not a correctness bug — oversight tooling, lower
+// priority than the applicant-facing Wizard — see CLAUDE.md item 8+9
+// follow-up), but a REPORT/APPEAL row's real districtId (from real
+// nationwide geography, see Wizard.jsx) won't be in that list — falls
+// back to humanizing the slug rather than showing the raw id.
 function districtLabel(t, districtId) {
   const d = ALL_DISTRICTS.find((x) => x.id === districtId)
-  return d ? t(d.labelKey) : districtId
+  return d ? t(d.labelKey) : humanizeSlug(districtId)
 }
 
 // Oversight only — this page never lets an admin approve, resolve, or

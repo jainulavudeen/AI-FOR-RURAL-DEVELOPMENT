@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { structureFinance, buildEmiSchedule } from '@setu/core'
 import { useI18n } from '../i18n/I18nContext'
 import { useAppData } from '../context/AppDataContext'
-import { LOCATIONS } from '../data/locations'
+import { humanizeSlug } from '../lib/slug'
 import { BUSINESS_TYPES } from '../data/businesses'
 import { generateFeasibility } from '../lib/feasibility'
 import { formatINR } from '../lib/format'
@@ -58,10 +58,9 @@ export default function Compare() {
 
   if (!hasComparison || compareBusinessIds.length < 2) return null
 
-  const districtObj = LOCATIONS[selection.stateId]?.districts.find((d) => d.id === selection.districtId)
-  const districtLabelKey = districtObj?.labelKey
-  const blockLabelKey = districtObj?.blocks.find((b) => b.id === selection.blockId)?.labelKey
-  const stateLabelKey = LOCATIONS[selection.stateId]?.labelKey
+  const stateName = selection.stateName || humanizeSlug(selection.stateId)
+  const districtName = selection.districtName || humanizeSlug(selection.districtId)
+  const blockName = selection.blockName || humanizeSlug(selection.blockId)
 
   const viewFullReport = (businessId) => {
     updateSelection({ businessId })
@@ -76,9 +75,9 @@ export default function Compare() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-primary-900">{t('compare.pageTitle')}</h1>
           <p className="mt-2 text-sm text-ink-900/60">
             {t('compare.pageSubtitle', {
-              block: t(blockLabelKey),
-              district: t(districtLabelKey),
-              state: t(stateLabelKey),
+              block: blockName,
+              district: districtName,
+              state: stateName,
             })}
           </p>
         </div>

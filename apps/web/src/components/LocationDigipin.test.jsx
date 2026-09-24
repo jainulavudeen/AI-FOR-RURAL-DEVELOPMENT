@@ -62,7 +62,14 @@ describe('LocationDigipin GPS reverse-geocode race condition', () => {
     positionDeferred.resolve({ coords: { latitude: 9.9252, longitude: 78.1198 } })
     geocodeDeferred.resolve({ state: 'Tamil Nadu', district: 'Madurai' })
 
-    await waitFor(() => expect(onLocationResolved).toHaveBeenCalledWith({ stateId: 'tamil_nadu', districtId: 'madurai' }))
+    await waitFor(() =>
+      expect(onLocationResolved).toHaveBeenCalledWith({
+        stateId: 'tamil_nadu',
+        stateName: 'Tamil Nadu',
+        districtId: 'madurai',
+        districtName: 'Madurai',
+      })
+    )
   })
 
   it('drops the GPS result instead of clobbering a district the user picked while it was resolving', async () => {

@@ -11,6 +11,9 @@ export const blocks = pgTable(
       .notNull()
       .references(() => districts.id),
     name: text('name').notNull(),
+    // Same stable-join-key principle as districts.code — see that file's
+    // header. Nullable for the same reason.
+    code: text('code').unique(),
     digipin: text('digipin'),
     geom: geometry('geom', { type: 'Polygon', srid: 4326 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -85,6 +85,13 @@
       "when": 1790238537124,
       "tag": "0011_long_inertia",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790243184571,
+      "tag": "0012_cultured_firebrand",
+      "breakpoints": true
     }
   ]
 }

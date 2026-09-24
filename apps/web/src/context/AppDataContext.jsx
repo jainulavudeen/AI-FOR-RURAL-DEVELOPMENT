@@ -4,8 +4,11 @@ const AppDataContext = createContext(null)
 
 const DEFAULT_SELECTION = {
   stateId: '',
+  stateName: '',
   districtId: '',
+  districtName: '',
   blockId: '',
+  blockName: '',
   businessId: '',
   margin: 20000,
   // 'self_reported' (default, always available) or 'aa' (Account

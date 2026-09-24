@@ -5,7 +5,7 @@ import { AlertTriangle, Download, RefreshCcw, Pencil, BadgeCheck, SlidersHorizon
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
-import { LOCATIONS } from '../data/locations'
+import { humanizeSlug } from '../lib/slug'
 import { BUSINESS_TYPES } from '../data/businesses'
 import { getEligibleSchemes, structureFinance, buildEmiSchedule } from '@setu/core'
 import { generateFeasibility, applyRealFactors, getBestAlternativeBusiness } from '../lib/feasibility'
@@ -156,10 +156,13 @@ export default function Results() {
 
   if (!business || !selection.stateId || !selection.districtId || !selection.blockId) return null
 
-  const districtObj = LOCATIONS[selection.stateId]?.districts.find((d) => d.id === selection.districtId)
-  const districtLabelKey = districtObj?.labelKey
-  const blockLabelKey = districtObj?.blocks.find((b) => b.id === selection.blockId)?.labelKey
-  const stateLabelKey = LOCATIONS[selection.stateId]?.labelKey
+  // Real nationwide names (see Wizard.jsx — selection now carries
+  // stateName/districtName/blockName alongside the ids, set at selection
+  // time from lib/geography.js's real Census data). humanizeSlug is only
+  // a fallback for a report saved before that existed.
+  const stateName = selection.stateName || humanizeSlug(selection.stateId)
+  const districtName = selection.districtName || humanizeSlug(selection.districtId)
+  const blockName = selection.blockName || humanizeSlug(selection.blockId)
   const needsReview = feasibility.verdictKey === 'verdict.marginal' || feasibility.verdictKey === 'verdict.low'
 
   const today = new Date().toLocaleDateString(language === 'en' ? 'en-IN' : language, {
@@ -178,9 +181,9 @@ export default function Results() {
             </span>
             {t('results.subtitle', {
               business: t(business.labelKey),
-              block: t(blockLabelKey),
-              district: t(districtLabelKey),
-              state: t(stateLabelKey),
+              block: blockName,
+              district: districtName,
+              state: stateName,
             })}
           </p>
           {selection.digipin && (
@@ -193,9 +196,9 @@ export default function Results() {
             feasibility={feasibility}
             finance={finance}
             schedule={schedule}
-            stateLabelKey={stateLabelKey}
-            districtLabelKey={districtLabelKey}
-            blockLabelKey={blockLabelKey}
+            stateName={stateName}
+            districtName={districtName}
+            blockName={blockName}
           />
           <Link
             to="/eligibility"

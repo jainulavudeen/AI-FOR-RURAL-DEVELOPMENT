@@ -3,7 +3,7 @@ import { MapPin, Check, AlertTriangle, X } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { encodeDigipin, decodeDigipin, DigipinOutOfBoundsError, DigipinFormatError } from '../lib/digipin'
 import { getReverseGeocode } from '../lib/marketData'
-import { matchLocationByName } from '../data/locations'
+import { matchLocationByName } from '../lib/geography'
 
 const geolocationSupported = () => typeof navigator !== 'undefined' && 'geolocation' in navigator
 
@@ -19,11 +19,13 @@ function getPosition() {
 // `onLocationResolved` is a second, independent, best-effort pass: it
 // calls the backend's /feasibility/reverse-geocode (real, keyless OSM
 // Nominatim lookup by default) and matches the returned state/district
-// name against data/locations.js's mock catalogue. It only ever resolves
-// for the 8 states x 5 districts in that catalogue — everywhere else
-// correctly reports "not in our coverage" rather than an error (CLAUDE.md
-// rule 4: degrade, don't error). Block never auto-fills: no block-level
-// boundary data exists anywhere, real or mock (see locations.js), same
+// name against the real nationwide administrative catalogue
+// (lib/geography.js — Census 2011 names, 35 states/628 districts). A
+// genuine spelling/formatting mismatch between Nominatim's name and the
+// Census name correctly reports "not resolved" rather than an error
+// (CLAUDE.md rule 4: degrade, don't error). Block never auto-fills: real
+// block-level boundary polygons don't exist to reverse-geocode against
+// (blocks.geom stays null — see ingestion/adminHierarchy/), same
 // precedent as Wizard.jsx's voice-input matching stopping at district.
 // Mirrors SiteCaptureCard.jsx's geolocation -> encodeDigipin pattern,
 // minus the camera/consent/report linkage specific to site evidence.
@@ -60,18 +62,21 @@ export default function LocationDigipin({ digipin, onPinned, onClear, onLocation
 
       // Best-effort second pass — never throws past this point, and never
       // undoes the DIGIPIN pin above just because reverse geocoding is
-      // slow, unreachable, or has no match in the mock catalogue.
+      // slow, unreachable, or has no match against the real nationwide
+      // catalogue (lib/geography.js).
       const resolved = await getReverseGeocode(latitude, longitude)
-      const { stateId, districtId } = resolved ? matchLocationByName(resolved.state, resolved.district) : {}
+      const { stateId, stateName, districtId, districtName } = resolved
+        ? await matchLocationByName(resolved.state, resolved.district)
+        : {}
       const current = latestSelectionRef.current
       const userChangedSelectionMeanwhile =
         current.stateId !== requestedFrom.stateId || current.districtId !== requestedFrom.districtId
 
       if (stateId && !userChangedSelectionMeanwhile) {
-        onLocationResolved?.({ stateId, districtId })
-        // District doesn't always match even when state does — the mock
-        // catalogue only covers 5 districts per state (see locations.js),
-        // so a real district outside that list correctly leaves districtId
+        onLocationResolved?.({ stateId, stateName, districtId, districtName })
+        // District doesn't always match even when state does — OSM
+        // Nominatim's district name doesn't always agree exactly with
+        // the Census name, so a genuine mismatch correctly leaves districtId
         // empty. Reporting that honestly rather than claiming both filled.
         setMatchNotice(districtId ? 'matched' : 'stateOnly')
       } else if (stateId && userChangedSelectionMeanwhile) {
