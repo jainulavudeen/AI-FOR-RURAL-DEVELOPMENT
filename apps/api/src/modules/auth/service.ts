@@ -1,4 +1,4 @@
-import type Redis from 'ioredis'
+import type { Redis } from 'ioredis'
 import { checkAndIncrement, checkCooldown } from '../../lib/rateLimit'
 import { generateOtpCode, hashOtpCode, otpKeys, verifyOtpCode } from './otp'
 import type { SmsProvider } from './smsProvider'

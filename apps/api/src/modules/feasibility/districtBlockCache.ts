@@ -1,4 +1,4 @@
-import type Redis from 'ioredis'
+import type { Redis } from 'ioredis'
 import type { Db } from '../../db/client'
 import { findBlockIdByName, findDistrictIdByName } from './service'
 

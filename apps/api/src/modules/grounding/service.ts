@@ -1,7 +1,7 @@
 // Retrieval + narration. THE ONLY MODULE PERMITTED TO CALL AN LLM
 // (CLAUDE.md, non-negotiable boundary rule 2). No other module in this app
 // may import ../../llm/client — that import is the enforcement point.
-import type Redis from 'ioredis'
+import type { Redis } from 'ioredis'
 import type { Db } from '../../db/client'
 import { env } from '../../config/env'
 import { sha256Hex, stableStringify } from '../../lib/hash'

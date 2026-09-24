@@ -1,5 +1,5 @@
 import { and, eq, ilike, isNull } from 'drizzle-orm'
-import type Redis from 'ioredis'
+import type { Redis } from 'ioredis'
 import { BASE_SCORE, DEFAULT_BASE_SCORE, classifyVerdict, clampScore } from '@setu/core'
 import type { Db } from '../../db/client'
 import { blocks, districts, informalLendingRates } from '../../db/schema'

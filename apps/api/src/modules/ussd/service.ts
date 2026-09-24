@@ -1,4 +1,4 @@
-import type Redis from 'ioredis'
+import type { Redis } from 'ioredis'
 import { entryScreen, handleInput, initialSession, type UssdSession } from './sessionMachine'
 
 // "Session times out fast" — USSD sessions are conventionally much

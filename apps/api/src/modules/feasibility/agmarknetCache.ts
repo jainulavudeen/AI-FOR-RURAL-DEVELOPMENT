@@ -1,4 +1,4 @@
-import type Redis from 'ioredis'
+import type { Redis } from 'ioredis'
 import type { AgmarknetProvider, RawMarketActivity } from './agmarknetProvider'
 
 const FRESH_SECONDS = 6 * 60 * 60 // 6h — Agmarknet itself refreshes ~daily; well inside a day

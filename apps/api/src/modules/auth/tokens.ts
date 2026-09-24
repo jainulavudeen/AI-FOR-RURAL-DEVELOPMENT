@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import jwt from 'jsonwebtoken'
-import type Redis from 'ioredis'
+import type { Redis } from 'ioredis'
 import { env } from '../../config/env'
 
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60
