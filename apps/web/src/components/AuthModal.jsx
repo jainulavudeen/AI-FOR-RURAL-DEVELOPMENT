@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LogIn, LogOut, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { requestOtp, verifyOtp } from '../lib/auth'
@@ -8,17 +9,20 @@ import { requestOtp, verifyOtp } from '../lib/auth'
 const PHONE_REGEX = /^\d{10}$/
 const CODE_REGEX = /^\d{6}$/
 
-// Phone + SMS OTP sign-in — a small popover off the navbar, not a page.
-// "Flag this data" / "Request Human Review" open this via
-// useAuth().requestLogin() when the user isn't signed in yet.
-export default function OtpLogin() {
+// The ONE OtpLogin modal instance for the whole app, mounted once at the
+// App root (not inside Navbar) so it is never a CSS-hidden descendant of a
+// responsive nav breakpoint. Visibility is driven directly by the shared
+// AuthContext's `loginRequested` flag — no local shadow "open" state that
+// can drift from it — so every entry point (navbar, a page's signed-out
+// gate, "Flag this data", etc.) reliably opens the same visible dialog.
+// On success it navigates back to whatever page requested the login
+// (AuthContext.returnTo), instead of leaving the user wherever the app
+// happened to render, which was previously silent/accidental.
+export default function AuthModal() {
   const { t } = useI18n()
-  const { phone, isAuthenticated, login, logout, loginRequested, clearLoginRequest } = useAuth()
-  const [open, setOpen] = useState(false)
+  const { login, loginRequested, returnTo, clearLoginRequest } = useAuth()
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    if (loginRequested) setOpen(true)
-  }, [loginRequested])
   const [step, setStep] = useState('phone')
   const [phoneInput, setPhoneInput] = useState('')
   const [codeInput, setCodeInput] = useState('')
@@ -36,7 +40,6 @@ export default function OtpLogin() {
   }
 
   const close = () => {
-    setOpen(false)
     clearLoginRequest()
     reset()
   }
@@ -77,7 +80,11 @@ export default function OtpLogin() {
 
     if (result.ok) {
       login(result.session)
+      const destination = returnTo || '/'
       close()
+      if (destination !== window.location.pathname + window.location.search) {
+        navigate(destination)
+      }
       return
     }
 
@@ -95,41 +102,24 @@ export default function OtpLogin() {
     }
   }
 
-  if (isAuthenticated) {
-    return (
-      <div className="flex items-center gap-3">
-        <span className="hidden sm:inline text-xs text-ink-900/60">{t('auth.signedInAs', { phone })}</span>
-        <button
-          type="button"
-          onClick={logout}
-          className="inline-flex items-center gap-1.5 rounded-full border border-primary-200 px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 transition-colors"
-        >
-          <LogOut size={13} />
-          {t('auth.signOut')}
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => (open ? close() : setOpen(true))}
-        className="inline-flex items-center gap-1.5 rounded-full border border-primary-200 px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 transition-colors"
-      >
-        <LogIn size={13} />
-        {t('auth.signIn')}
-      </button>
-
-      <AnimatePresence>
-        {open && (
+    <AnimatePresence>
+      {loginRequested && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[100] flex items-start justify-center bg-ink-900/40 px-5 pt-24 sm:pt-32"
+          onClick={close}
+        >
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-primary-100 bg-white p-5 card-shadow-lg"
+            className="relative w-full max-w-[320px] rounded-2xl border border-primary-100 bg-white p-5 card-shadow-lg"
+            onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
@@ -149,6 +139,7 @@ export default function OtpLogin() {
                     type="tel"
                     inputMode="numeric"
                     maxLength={10}
+                    autoFocus
                     value={phoneInput}
                     onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ''))}
                     placeholder={t('auth.phonePlaceholder')}
@@ -178,6 +169,7 @@ export default function OtpLogin() {
                   type="text"
                   inputMode="numeric"
                   maxLength={6}
+                  autoFocus
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, ''))}
                   placeholder={t('auth.codePlaceholder')}
@@ -201,8 +193,8 @@ export default function OtpLogin() {
               </form>
             )}
           </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

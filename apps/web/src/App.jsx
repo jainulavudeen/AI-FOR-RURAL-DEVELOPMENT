@@ -10,6 +10,7 @@ import Footer from './components/Footer'
 import PageTransition from './components/PageTransition'
 import OfflineBanner from './components/OfflineBanner'
 import RouteSkeleton from './components/RouteSkeleton'
+import AuthModal from './components/AuthModal'
 
 // Route-level code splitting: each page (and whatever it pulls in —
 // Recharts on Results/Architecture/OfficerDashboard, framer-motion
@@ -70,6 +71,7 @@ export default function App() {
                   </Suspense>
                 </main>
                 <Footer />
+                <AuthModal />
               </div>
             </BrowserRouter>
           </AppDataProvider>

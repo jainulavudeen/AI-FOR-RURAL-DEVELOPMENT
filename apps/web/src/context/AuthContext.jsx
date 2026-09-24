@@ -6,6 +6,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => getSession())
   const [loginRequested, setLoginRequested] = useState(false)
+  const [returnTo, setReturnTo] = useState(null)
 
   const login = (nextSession) => setSession(nextSession)
 
@@ -14,11 +15,20 @@ export function AuthProvider({ children }) {
     setSession(null)
   }
 
-  // Lets a gated action (Flag this data, Request Human Review) ask the
-  // navbar's sign-in popover to open, without those components needing to
-  // know OtpLogin exists.
-  const requestLogin = () => setLoginRequested(true)
-  const clearLoginRequest = () => setLoginRequested(false)
+  // Lets any gated action anywhere in the app (Flag this data, Request
+  // Human Review, a page's own signed-out gate) ask the single global
+  // AuthModal to open, without those components needing to know it exists.
+  // Captures the current URL via window.location (not useLocation) because
+  // AuthProvider sits outside BrowserRouter — this still works since
+  // BrowserRouter drives window.location itself.
+  const requestLogin = () => {
+    setReturnTo(window.location.pathname + window.location.search)
+    setLoginRequested(true)
+  }
+  const clearLoginRequest = () => {
+    setLoginRequested(false)
+    setReturnTo(null)
+  }
 
   const value = useMemo(
     () => ({
@@ -28,10 +38,11 @@ export function AuthProvider({ children }) {
       login,
       logout,
       loginRequested,
+      returnTo,
       requestLogin,
       clearLoginRequest,
     }),
-    [session, loginRequested]
+    [session, loginRequested, returnTo]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

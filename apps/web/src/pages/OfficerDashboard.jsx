@@ -143,7 +143,7 @@ function AppealRow({ appeal, t, onSaved }) {
 
 export default function OfficerDashboard() {
   const { t } = useI18n()
-  const { isAuthenticated, role } = useAuth()
+  const { isAuthenticated, role, requestLogin } = useAuth()
   const [query, setQuery] = useState('')
   const [queue, setQueue] = useState(null)
   const [error, setError] = useState(false)
@@ -189,6 +189,15 @@ export default function OfficerDashboard() {
       {!canView && (
         <div className="rounded-3xl border border-primary-100 card-shadow-lg bg-white px-8 py-14 text-center">
           <p className="text-sm text-ink-900/60">{!isAuthenticated ? t('officer.signInPrompt') : t('officer.notOfficer')}</p>
+          {!isAuthenticated && (
+            <button
+              type="button"
+              onClick={requestLogin}
+              className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-400 transition-colors"
+            >
+              {t('auth.signIn')}
+            </button>
+          )}
         </div>
       )}
 
