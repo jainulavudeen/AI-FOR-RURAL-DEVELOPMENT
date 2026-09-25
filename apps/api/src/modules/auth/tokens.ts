@@ -6,9 +6,12 @@ import { env } from '../../config/env.js'
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60
 export const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60
 
+// `role` here is a hint for the client's first render only. The server
+// never authorizes from it — plugins/auth.ts replaces it with the role
+// read from the applicants row on every authenticated request.
 export interface AccessTokenClaims {
   sub: string
-  phone: string
+  phone: string | null
   role: string
 }
 

@@ -19,5 +19,6 @@ export interface DistrictOption {
 
 export interface BlockOption {
   id: string
+  uuid: string
   name: string
 }

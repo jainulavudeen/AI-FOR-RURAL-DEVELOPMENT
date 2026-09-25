@@ -1,15 +1,25 @@
-import type { ParsedBankTransaction, ParseResult } from './types'
+import type { ParsedBankTransaction, ParseResult } from './types.js'
 
 // Best-effort bank-statement text parser — deliberately NOT a general
 // solution. Real bank-statement PDFs vary wildly in layout across banks
 // (column order, date format, whether the balance column also carries a
 // DR/CR tag, multi-line entries...); robustly handling all of them is a
 // serious document-parsing problem real fintechs pay third-party services
-// for. This handles one common, recognizable shape — a line starting with
-// a date, containing a rupee amount immediately next to a DR/CR or
-// DEBIT/CREDIT/WITHDRAWAL/DEPOSIT marker — and is honest when it can't:
-// a transaction-shaped line (recognizable date) with no confidently-
-// classifiable amount becomes a warning, never a guess.
+// for. This handles two common, recognizable shapes and is honest when it
+// can't confidently classify either way — a transaction-shaped line
+// (recognizable date) that fails both becomes a warning, never a guess:
+//
+//  1. A rupee amount sitting immediately next to a DR/CR or
+//     DEBIT/CREDIT/WITHDRAWAL/DEPOSIT marker (e.g. "500.00 DR").
+//  2. A separate Debit/Credit-column layout with NO marker at all (e.g.
+//     SBI's own passbook-style export: "...Description... 100.00
+//     20350.75" — amount then running balance, direction unlabeled). This
+//     is classified from the running balance itself: comparing this
+//     line's trailing balance to the previous transaction-line's balance
+//     tells you debit vs credit deterministically — it is arithmetic, not
+//     a guess — and is only trusted when that delta's magnitude actually
+//     matches the printed amount, so a coincidental extra number never
+//     gets misread as a transaction.
 //
 // This is why the "supplement, never replace" design decision (see
 // service.ts) matters: a partial or imperfect extraction only adds to the
@@ -40,9 +50,15 @@ const TEXT_DATE_RE = /^\s*(\d{1,2})\s+([A-Za-z]{3,9})[,.]?\s+(\d{2,4})\b/
 const AMOUNT_DIRECTION_RE =
   /(?:₹|rs\.?|inr)?\s?([\d,]+\.\d{2})\s*\(?(dr|cr|debit|credit|withdrawal|deposit)\)?|\b(dr|cr|debit|credit|withdrawal|deposit)\)?\s*[:\-]?\s*(?:₹|rs\.?|inr)?\s?([\d,]+\.\d{2})/i
 
+// Any plain rupee-decimal number, no marker required — used by the
+// balance-delta fallback below to find every candidate amount/balance on
+// a line, in left-to-right order.
+const PLAIN_AMOUNT_RE = /(?:₹|rs\.?|inr)?\s?([\d,]+\.\d{2})/gi
+
 const DEBIT_KEYWORDS = new Set(['dr', 'debit', 'withdrawal'])
 const MAX_TRANSACTIONS = 2000
 const MIN_YEAR = 2015
+const BALANCE_EPSILON = 0.01
 
 function normalizeYear(rawYear: number): number {
   if (rawYear >= 100) return rawYear
@@ -85,10 +101,34 @@ function extractDescription(line: string, afterDateIndex: number, amountMatchInd
     .trim()
 }
 
+interface AmountMatch {
+  value: number
+  index: number
+}
+
+function collectPlainAmounts(line: string): AmountMatch[] {
+  const out: AmountMatch[] = []
+  let m: RegExpExecArray | null
+  PLAIN_AMOUNT_RE.lastIndex = 0
+  while ((m = PLAIN_AMOUNT_RE.exec(line))) {
+    const raw = m[1]
+    if (!raw) continue
+    out.push({ value: Number(raw.replace(/,/g, '')), index: m.index })
+  }
+  return out
+}
+
 export function parseBankStatementText(text: string): ParseResult {
   const lines = text.split(/\r?\n/)
   const transactions: ParsedBankTransaction[] = []
   const warnings: string[] = []
+
+  // Tracks the running balance printed on the last transaction-shaped
+  // line seen, however it was (or wasn't) classified — the unmarked
+  // Debit/Credit-column fallback needs this to turn "balance went down"
+  // into "debit", which only works if the chain of balances stays
+  // unbroken across lines, classified or not.
+  let previousBalance: number | null = null
 
   for (const rawLine of lines) {
     if (transactions.length >= MAX_TRANSACTIONS) break
@@ -99,25 +139,51 @@ export function parseBankStatementText(text: string): ParseResult {
     const { date, matchLength } = tryParseDate(line)
     if (!date) continue // not a transaction-shaped line at all — normal for headers/footers, no warning
 
+    const amounts = collectPlainAmounts(line)
+    const currentBalance = amounts.length > 0 ? (amounts[amounts.length - 1]?.value ?? null) : null
+
     const match = AMOUNT_DIRECTION_RE.exec(line)
-    if (!match) {
-      warnings.push(`Line looked like a transaction but no amount could be classified: "${line.slice(0, 80)}"`)
-      continue
+    if (match) {
+      const amountText = match[1] ?? match[4]
+      const keyword = (match[2] ?? match[3])?.toLowerCase()
+      const amount = Number(amountText?.replace(/,/g, ''))
+
+      if (amountText && keyword && Number.isFinite(amount) && amount > 0) {
+        const direction: 'debit' | 'credit' = DEBIT_KEYWORDS.has(keyword) ? 'debit' : 'credit'
+        const description = extractDescription(line, matchLength, match.index) || 'Bank transaction'
+        transactions.push({ occurredAt: date, description, amount, direction })
+        previousBalance = currentBalance ?? previousBalance
+        continue
+      }
     }
 
-    const amountText = match[1] ?? match[4]
-    const keyword = (match[2] ?? match[3])?.toLowerCase()
-    const amount = Number(amountText?.replace(/,/g, ''))
-
-    if (!amountText || !keyword || !Number.isFinite(amount) || amount <= 0) {
-      warnings.push(`Line looked like a transaction but the amount could not be read: "${line.slice(0, 80)}"`)
-      continue
+    // Fallback: no DR/CR-style marker anywhere on the line — try a
+    // separate Debit/Credit-column layout instead, where the last number
+    // is a running balance and exactly one earlier number is the
+    // transaction amount. Direction comes from comparing this balance to
+    // the previous line's (arithmetic, not a guess); it's only trusted
+    // when the delta's size actually matches the printed amount, so an
+    // unrelated pair of numbers can't coincidentally get read as a
+    // transaction.
+    const nonBalanceAmounts = amounts.slice(0, -1)
+    const candidate = nonBalanceAmounts.length === 1 ? nonBalanceAmounts[0] : undefined
+    if (candidate && currentBalance != null && previousBalance != null) {
+      const delta = currentBalance - previousBalance
+      if (
+        candidate.value > 0 &&
+        Math.abs(delta) > BALANCE_EPSILON &&
+        Math.abs(Math.abs(delta) - candidate.value) < BALANCE_EPSILON
+      ) {
+        const direction: 'debit' | 'credit' = delta < 0 ? 'debit' : 'credit'
+        const description = extractDescription(line, matchLength, candidate.index) || 'Bank transaction'
+        transactions.push({ occurredAt: date, description, amount: candidate.value, direction })
+        previousBalance = currentBalance
+        continue
+      }
     }
 
-    const direction: 'debit' | 'credit' = DEBIT_KEYWORDS.has(keyword) ? 'debit' : 'credit'
-    const description = extractDescription(line, matchLength, match.index) || 'Bank transaction'
-
-    transactions.push({ occurredAt: date, description, amount, direction })
+    warnings.push(`Line looked like a transaction but no amount could be classified: "${line.slice(0, 80)}"`)
+    previousBalance = currentBalance ?? previousBalance
   }
 
   return { transactions, warnings }

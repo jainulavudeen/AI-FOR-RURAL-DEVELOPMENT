@@ -30,35 +30,8 @@ export async function getBankDossier(id) {
   }
 }
 
-// Officer-only (enforced server-side) — records a "Verified Approval", not
-// a digital signature (this app has no government DSC — see CLAUDE.md
-// item 7). Every call inserts a fresh approval row server-side; re-calling
-// this after an edit/re-review adds another approval rather than editing
-// the first, so a previously-printed hash keeps verifying against exactly
-// the record it was issued from.
-export async function approveBankDossier(id, { officerName, officerDesignation }) {
-  try {
-    const response = await authorizedFetch(`/bank-dossier/${id}/approve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ officerName, officerDesignation }),
-    })
-    const data = await response.json().catch(() => null)
-    return { ok: response.ok, status: response.status, data }
-  } catch {
-    return { ok: false, status: 0, data: null }
-  }
-}
-
-// Public, unauthenticated — a bank verifying a hash printed on paper has
-// no Setu login of their own. authorizedFetch degrades to a plain fetch
-// when there's no session, which is exactly what's needed here.
-export async function verifyBankDossierApproval(hash) {
-  try {
-    const response = await authorizedFetch(`/bank-dossier/verify/${encodeURIComponent(hash)}`)
-    const data = await response.json().catch(() => null)
-    return { ok: response.ok, status: response.status, data }
-  } catch {
-    return { ok: false, status: 0, data: null }
-  }
-}
+// Approval no longer happens here: an officer approves an APPLICATION
+// assigned to them (lib/applications.js), which attaches the Verified
+// Approval to that application's frozen dossier. GET /bank-dossier/:id
+// returns it as `approval` + `verifyUrl` + `qrSvg` (server-rendered).
+// Public verification: lib/applications.js's verifyApproval.

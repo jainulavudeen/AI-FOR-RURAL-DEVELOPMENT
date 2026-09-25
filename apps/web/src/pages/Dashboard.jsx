@@ -15,6 +15,7 @@ import CashFlowSnapshotCard from '../components/CashFlowSnapshotCard'
 import PeerBenchmarkCard from '../components/PeerBenchmarkCard'
 import AlternativeBusinessCard from '../components/AlternativeBusinessCard'
 import LogSaleModal from '../components/LogSaleModal'
+import MyApplications from '../components/MyApplications'
 
 // "Your shop at a glance" — the V2 home base a returning applicant lands
 // on, composing pieces that already exist elsewhere rather than
@@ -105,7 +106,12 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 sm:px-8 py-10 sm:py-14">
-      <DailyBulletinBanner phone={phone} onLogSale={() => setModalOpen(true)} />
+      <h1 className="mb-5 text-2xl font-extrabold text-primary-900">{t('applications.dashboardTitle')}</h1>
+      <MyApplications />
+
+      <div className="mt-6">
+        <DailyBulletinBanner phone={phone} onLogSale={() => setModalOpen(true)} />
+      </div>
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <FestivalDemandCard festivals={upcomingFestivals} />

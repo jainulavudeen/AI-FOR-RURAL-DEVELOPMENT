@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ShieldCheck, Users, FileText, Gavel, History, RefreshCw } from 'lucide-react'
+import { ShieldCheck, Users, FileText, Gavel, History, RefreshCw, Inbox } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
-import { useAuth } from '../context/AuthContext'
-import { getOfficerStats, getAdminReports, getAdminAppeals, reassignAppeal, getAuditLog } from '../lib/admin'
+import { getOfficerAccounts, getAdminReports, getAdminAppeals, reassignAppeal, getAuditLog } from '../lib/admin'
+import ApplicationsAdminTab, { AuditAction } from '../components/admin/ApplicationsAdminTab'
+import OfficerAccountsTab from '../components/admin/OfficerAccountsTab'
 import { LOCATIONS, STATE_IDS } from '../data/locations'
 import { humanizeSlug } from '../lib/slug'
 
@@ -18,6 +19,7 @@ const STATUS_STYLES = {
 }
 
 const TABS = [
+  { key: 'applications', icon: Inbox },
   { key: 'officers', icon: Users },
   { key: 'reports', icon: FileText },
   { key: 'appeals', icon: Gavel },
@@ -38,45 +40,15 @@ function districtLabel(t, districtId) {
 }
 
 // Oversight only — this page never lets an admin approve, resolve, or
-// reject anything itself (CLAUDE.md item 6). Every read/write here hits
-// apps/api's /admin/* routes, which are server-enforced to role==='admin'
-// regardless of what this page does or hides — an officer token gets the
-// same 403 by calling the API directly, bypassing this UI entirely.
+// reject anything itself. Admins route work (assign/reassign applications
+// and appeals), manage officer accounts and their jurisdictions, and see
+// the full audit log. Reaching this page at all requires role 'admin'
+// (App.jsx's RequireRole), and every call it makes is independently
+// enforced server-side — an officer token gets a 403 from the API even
+// if it bypasses this UI entirely.
 export default function AdminPortal() {
   const { t } = useI18n()
-  const { isAuthenticated, role, requestLogin } = useAuth()
-  const [tab, setTab] = useState('officers')
-
-  if (!isAuthenticated) {
-    return (
-      <div className="mx-auto max-w-3xl px-5 sm:px-8 py-14 sm:py-20 text-center">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-700 text-white mb-4">
-          <ShieldCheck size={22} />
-        </span>
-        <h1 className="text-2xl font-extrabold text-primary-900">{t('admin.title')}</h1>
-        <div className="mt-8 rounded-3xl border border-primary-100 card-shadow-lg bg-white px-8 py-14">
-          <p className="text-sm text-ink-900/60">{t('admin.signInPrompt')}</p>
-          <button
-            type="button"
-            onClick={requestLogin}
-            className="mt-5 inline-flex items-center rounded-full bg-amber-500 px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-400 transition-colors"
-          >
-            {t('admin.signInCta')}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (role !== 'admin') {
-    return (
-      <div className="mx-auto max-w-3xl px-5 sm:px-8 py-14 sm:py-20 text-center">
-        <div className="rounded-3xl border border-primary-100 card-shadow-lg bg-white px-8 py-14">
-          <p className="text-sm text-ink-900/60">{t('admin.notAdmin')}</p>
-        </div>
-      </div>
-    )
-  }
+  const [tab, setTab] = useState('applications')
 
   return (
     <div className="mx-auto max-w-6xl px-5 sm:px-8 py-12 sm:py-16">
@@ -109,7 +81,8 @@ export default function AdminPortal() {
         ))}
       </div>
 
-      {tab === 'officers' && <OfficersTab t={t} />}
+      {tab === 'applications' && <ApplicationsAdminTab />}
+      {tab === 'officers' && <OfficerAccountsTab />}
       {tab === 'reports' && <ReportsTab t={t} />}
       {tab === 'appeals' && <AppealsTab t={t} />}
       {tab === 'auditLog' && <AuditLogTab t={t} />}
@@ -122,60 +95,6 @@ function TableShell({ children }) {
     <div className="overflow-x-auto rounded-2xl border border-primary-100 bg-white">
       <table className="w-full text-[12.5px]">{children}</table>
     </div>
-  )
-}
-
-function OfficersTab({ t }) {
-  const [rows, setRows] = useState(null)
-  const [error, setError] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    getOfficerStats().then((result) => {
-      if (cancelled) return
-      if (result.ok) setRows(result.data)
-      else setError(true)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  if (error) return <p className="text-sm text-red-600">{t('admin.loadError')}</p>
-  if (!rows) return <p className="text-sm text-ink-900/50">{t('common.loading')}</p>
-
-  return (
-    <TableShell>
-      <thead>
-        <tr className="text-left text-[10.5px] uppercase tracking-wide text-ink-900/40 border-b border-primary-100">
-          <th className="px-4 py-3">{t('admin.officerColLabel')}</th>
-          <th className="px-4 py-3">{t('officer.statusPending')}</th>
-          <th className="px-4 py-3">{t('officer.statusResolved')}</th>
-          <th className="px-4 py-3">{t('officer.statusRejected')}</th>
-          <th className="px-4 py-3">{t('officer.statusEscalated')}</th>
-          <th className="px-4 py-3">{t('admin.avgResolutionColLabel')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((o) => (
-          <tr key={o.officerId} className="border-t border-primary-50">
-            <td className="px-4 py-3 font-semibold text-primary-900">{o.phone}</td>
-            <td className="px-4 py-3">{o.pendingCount}</td>
-            <td className="px-4 py-3">{o.resolvedCount}</td>
-            <td className="px-4 py-3">{o.rejectedCount}</td>
-            <td className="px-4 py-3">{o.escalatedCount}</td>
-            <td className="px-4 py-3">{o.avgResolutionHours != null ? `${o.avgResolutionHours}h` : t('admin.noDataYet')}</td>
-          </tr>
-        ))}
-        {rows.length === 0 && (
-          <tr>
-            <td colSpan={6} className="px-4 py-6 text-center text-ink-900/40">
-              {t('admin.noOfficers')}
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </TableShell>
   )
 }
 
@@ -237,7 +156,7 @@ function ReportsTab({ t }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-t border-primary-50">
-                <td className="px-4 py-3 font-semibold text-primary-900">{r.applicantPhone}</td>
+                <td className="px-4 py-3 font-semibold text-primary-900">{r.applicantPhone ?? '—'}</td>
                 <td className="px-4 py-3">{r.score}</td>
                 <td className="px-4 py-3">{r.verdictKey}</td>
                 <td className="px-4 py-3">{r.matchedSchemeId}</td>
@@ -268,8 +187,8 @@ function AppealsTab({ t }) {
   const [reassigning, setReassigning] = useState(null)
 
   useEffect(() => {
-    getOfficerStats().then((result) => {
-      if (result.ok) setOfficers(result.data)
+    getOfficerAccounts().then((result) => {
+      if (result.ok) setOfficers(result.data.filter((o) => o.active))
     })
   }, [])
 
@@ -337,13 +256,13 @@ function AppealsTab({ t }) {
           <tbody>
             {rows.map((a) => (
               <tr key={a.id} className="border-t border-primary-50">
-                <td className="px-4 py-3 font-semibold text-primary-900">{a.applicantPhone}</td>
+                <td className="px-4 py-3 font-semibold text-primary-900">{a.applicantPhone ?? '—'}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[a.status]}`}>
                     {a.status}
                   </span>
                 </td>
-                <td className="px-4 py-3">{a.assignedOfficerPhone ?? '—'}</td>
+                <td className="px-4 py-3">{a.assignedOfficerPhone ?? (a.assignedOfficerId ? a.assignedOfficerId.slice(0, 8) : t('adminFlow.unassigned'))}</td>
                 <td className="px-4 py-3">{a.districtId ? districtLabel(t, a.districtId) : '—'}</td>
                 <td className="px-4 py-3">
                   <select
@@ -356,10 +275,10 @@ function AppealsTab({ t }) {
                       {reassigning === a.id ? t('admin.reassigning') : t('admin.reassignPlaceholder')}
                     </option>
                     {officers
-                      .filter((o) => o.officerId !== a.assignedOfficerId)
+                      .filter((o) => o.id !== a.assignedOfficerId)
                       .map((o) => (
-                        <option key={o.officerId} value={o.officerId}>
-                          {o.phone}
+                        <option key={o.id} value={o.id}>
+                          {o.displayName || o.phone || o.email}
                         </option>
                       ))}
                   </select>
@@ -424,9 +343,17 @@ function AuditLogTab({ t }) {
             {rows.map((entry) => (
               <tr key={entry.id} className="border-t border-primary-50">
                 <td className="px-4 py-3 whitespace-nowrap">{new Date(entry.createdAt).toLocaleString()}</td>
-                <td className="px-4 py-3 font-semibold text-primary-900">{entry.action}</td>
                 <td className="px-4 py-3">
-                  {entry.actorId.slice(0, 8)} <span className="text-ink-900/40">({entry.actorRole})</span>
+                  <AuditAction entry={entry} />
+                </td>
+                <td className="px-4 py-3">
+                  {entry.actorRole === 'system' ? (
+                    t('roles.system')
+                  ) : (
+                    <>
+                      {entry.actorLabel ?? entry.actorId.slice(0, 8)} <span className="text-ink-900/40">({t(`roles.${entry.actorRole}`)})</span>
+                    </>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   {entry.targetType} {entry.targetId.slice(0, 8)}

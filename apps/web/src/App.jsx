@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, MotionConfig } from 'framer-motion'
 import { I18nProvider } from './i18n/I18nContext'
 import { AppDataProvider } from './context/AppDataContext'
@@ -10,7 +10,8 @@ import Footer from './components/Footer'
 import PageTransition from './components/PageTransition'
 import OfflineBanner from './components/OfflineBanner'
 import RouteSkeleton from './components/RouteSkeleton'
-import AuthModal from './components/AuthModal'
+import RequireRole from './components/RequireRole'
+import { ALL_ROLES } from './lib/routeAccess'
 
 // Route-level code splitting: each page (and whatever it pulls in —
 // Recharts on Results/Architecture/OfficerDashboard, framer-motion
@@ -28,28 +29,49 @@ const Results = lazy(() => import('./pages/Results'))
 const Compare = lazy(() => import('./pages/Compare'))
 const SchemeComparison = lazy(() => import('./pages/SchemeComparison'))
 const Architecture = lazy(() => import('./pages/Architecture'))
-const OfficerDashboard = lazy(() => import('./pages/OfficerDashboard'))
 const AdminPortal = lazy(() => import('./pages/AdminPortal'))
+const SignIn = lazy(() => import('./pages/SignIn'))
+const Account = lazy(() => import('./pages/Account'))
+const ReviewQueue = lazy(() => import('./pages/ReviewQueue'))
+const VerifyApproval = lazy(() => import('./pages/VerifyApproval'))
+
+const APPLICANT = ['applicant']
+
+// Public: Landing, the one sign-in page, the bank-facing QR verification
+// page, and the "How it works" explainer. Everything else needs a signed-in
+// account of the right role (lib/routeAccess.js has the same table); the
+// API enforces all of it again server-side.
+function Page({ roles, children }) {
+  const content = <PageTransition>{children}</PageTransition>
+  return roles ? <RequireRole roles={roles}>{content}</RequireRole> : content
+}
 
 function AnimatedRoutes() {
   const location = useLocation()
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageTransition><Landing /></PageTransition>} />
-        <Route path="/dashboard" element={<PageTransition><Dashboard /></PageTransition>} />
-        <Route path="/eligibility" element={<PageTransition><Wizard /></PageTransition>} />
-        <Route path="/bahi-khata" element={<PageTransition><BahiKhata /></PageTransition>} />
-        <Route path="/credit-score" element={<PageTransition><CreditScore /></PageTransition>} />
-        <Route path="/advisor-saathi" element={<PageTransition><AdvisorSaathi /></PageTransition>} />
-        <Route path="/bank-dossier" element={<PageTransition><BankDossier /></PageTransition>} />
-        <Route path="/bank-dossier/:id" element={<PageTransition><BankDossier /></PageTransition>} />
-        <Route path="/results" element={<PageTransition><Results /></PageTransition>} />
-        <Route path="/compare" element={<PageTransition><Compare /></PageTransition>} />
-        <Route path="/schemes" element={<PageTransition><SchemeComparison /></PageTransition>} />
-        <Route path="/architecture" element={<PageTransition><Architecture /></PageTransition>} />
-        <Route path="/partners" element={<PageTransition><OfficerDashboard /></PageTransition>} />
-        <Route path="/admin" element={<PageTransition><AdminPortal /></PageTransition>} />
+        <Route path="/" element={<Page><Landing /></Page>} />
+        <Route path="/signin" element={<Page><SignIn /></Page>} />
+        <Route path="/verify/:hash" element={<Page><VerifyApproval /></Page>} />
+        <Route path="/architecture" element={<Page><Architecture /></Page>} />
+
+        <Route path="/dashboard" element={<Page roles={APPLICANT}><Dashboard /></Page>} />
+        <Route path="/eligibility" element={<Page roles={APPLICANT}><Wizard /></Page>} />
+        <Route path="/results" element={<Page roles={APPLICANT}><Results /></Page>} />
+        <Route path="/compare" element={<Page roles={APPLICANT}><Compare /></Page>} />
+        <Route path="/bahi-khata" element={<Page roles={APPLICANT}><BahiKhata /></Page>} />
+        <Route path="/credit-score" element={<Page roles={APPLICANT}><CreditScore /></Page>} />
+        <Route path="/advisor-saathi" element={<Page roles={APPLICANT}><AdvisorSaathi /></Page>} />
+        <Route path="/schemes" element={<Page roles={APPLICANT}><SchemeComparison /></Page>} />
+        <Route path="/bank-dossier" element={<Page roles={APPLICANT}><BankDossier /></Page>} />
+        <Route path="/bank-dossier/:id" element={<Page roles={ALL_ROLES}><BankDossier /></Page>} />
+
+        <Route path="/review" element={<Page roles={['officer']}><ReviewQueue /></Page>} />
+        <Route path="/partners" element={<Navigate to="/review" replace />} />
+        <Route path="/admin" element={<Page roles={['admin']}><AdminPortal /></Page>} />
+        <Route path="/account" element={<Page roles={ALL_ROLES}><Account /></Page>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
   )
@@ -61,9 +83,9 @@ export default function App() {
   return (
     <MotionConfig reducedMotion={isSlow ? 'always' : 'never'}>
       <I18nProvider>
-        <AuthProvider>
-          <AppDataProvider>
-            <BrowserRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppDataProvider>
               <div className="min-h-screen flex flex-col bg-surface">
                 <OfflineBanner />
                 <Navbar />
@@ -73,11 +95,10 @@ export default function App() {
                   </Suspense>
                 </main>
                 <Footer />
-                <AuthModal />
               </div>
-            </BrowserRouter>
-          </AppDataProvider>
-        </AuthProvider>
+            </AppDataProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </I18nProvider>
     </MotionConfig>
   )

@@ -23,6 +23,32 @@ export interface DossierSnapshot {
   districtId: string | null
   schemeId: string | null
   financial: FinancialSnapshot
+  // Present on dossiers frozen at application submit: the exact saved
+  // report under review (its own numbers came from @setu/core and are
+  // immutable in `reports`).
+  report?: DossierReportRef
+}
+
+export interface DossierReportRef {
+  reportId: string
+  applicationId: string
+  score: number
+  verdictKey: string
+  matchedSchemeId: string
+  blockId: string | null
+  businessId: string | null
+  margin: number | null
+  reportCreatedAt: string
+}
+
+// What the dossier page prints in its "Verified Approval" block.
+export interface DossierApprovalView {
+  officerName: string
+  officerDesignation: string
+  approvedAt: string
+  signatureHash: string
+  // false once superseded (application revised or re-decided later).
+  current: boolean
 }
 
 export interface BankDossierRecord {
@@ -31,15 +57,6 @@ export interface BankDossierRecord {
   schemeId: string | null
   snapshot: DossierSnapshot
   createdAt: string
-}
-
-// "Verified Approval" — see approvalSignature.ts's header on why this is
-// never called a digital signature. officerName/officerDesignation are
-// self-reported by the officer at approval time (applicants has no
-// name/designation column) and frozen into this row.
-export interface ApproveDossierBody {
-  officerName: string
-  officerDesignation: string
 }
 
 export interface DossierApproval {

@@ -46,6 +46,20 @@ describe('createSiteCapture', () => {
     expect(deps.insertSiteCapture).toHaveBeenCalledWith(expect.objectContaining({ applicantId: 'applicant-1', digipin: validBody.digipin }))
   })
 
+  it('stores a user-confirmed address with its source', async () => {
+    const deps = makeDeps()
+    await createSiteCapture(deps, 'applicant-1', { ...validBody, confirmedAddress: '  12 Main Rd, Melur  ', addressSource: 'user_corrected' })
+    expect(deps.insertSiteCapture).toHaveBeenCalledWith(
+      expect.objectContaining({ confirmedAddress: '12 Main Rd, Melur', addressSource: 'user_corrected' })
+    )
+  })
+
+  it('rejects an address with no user-provided source (could be a raw Google suggestion)', async () => {
+    const deps = makeDeps()
+    await expect(createSiteCapture(deps, 'applicant-1', { ...validBody, confirmedAddress: '12 Main Rd' })).rejects.toThrow(ValidationError)
+    expect(deps.insertSiteCapture).not.toHaveBeenCalled()
+  })
+
   it('refuses to attach a capture to a report the caller does not own', async () => {
     const deps = makeDeps({ getReportOwner: vi.fn(async () => 'someone-else') })
     await expect(createSiteCapture(deps, 'applicant-1', { ...validBody, reportId: 'report-1' })).rejects.toThrow(ForbiddenError)
@@ -63,8 +77,12 @@ describe('getSiteCapturesForReport', () => {
     await expect(getSiteCapturesForReport(deps, 'applicant-1', 'applicant', 'report-1')).rejects.toThrow(ForbiddenError)
   })
 
-  it('lets any officer view captures regardless of report ownership', async () => {
-    const deps = makeDeps({ getReportOwner: vi.fn(async () => 'someone-else') })
+  it('lets an officer view captures only for a report assigned to them', async () => {
+    const deps = makeDeps({
+      getReportOwner: vi.fn(async () => 'someone-else'),
+      officerCanSeeReport: vi.fn(async (_reportId: string, officerId: string) => officerId === 'officer-1'),
+    })
     await expect(getSiteCapturesForReport(deps, 'officer-1', 'officer', 'report-1')).resolves.toEqual([])
+    await expect(getSiteCapturesForReport(deps, 'officer-2', 'officer', 'report-1')).rejects.toThrow(ForbiddenError)
   })
 })

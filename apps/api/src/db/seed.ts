@@ -5,6 +5,7 @@ import type { Db } from './client.js'
 import { db } from './client.js'
 import { applicants, appeals, blocks, businessTypes, districts, informalLendingRates, reports, schemeRules } from './schema/index.js'
 import { K_ANONYMITY_THRESHOLD } from '../modules/feasibility/peerBenchmark.js'
+import { seedDemoFlow } from './seedDemoFlow.js'
 
 // Fixed demo phone numbers — sign in via the normal OTP flow (console
 // adapter logs the code) to see the Partner Dashboard's officer queue, or
@@ -273,6 +274,10 @@ export async function seedDemoData(db: Db) {
   console.log(
     `Seeded Madurai pilot district (3 blocks) + scheme_rules v1 (micro_finance, term_loan) + ${BUSINESS_TYPE_CATALOGUE.length} business types + demo officer (${DEMO_OFFICER_PHONE}) + demo admin (${DEMO_ADMIN_PHONE}) + informal-lending-rate regional fallback + ${K_ANONYMITY_THRESHOLD + 1} synthetic peer-benchmark reports + ${DEMO_PROFILES.length} demo applicant profiles (dairy/retail/textiles/poultry/manufacturing, both schemes, all four score bands)`
   )
+
+  // The applicant → officer → admin walkthrough (DEMO_FLOW.md). Also
+  // runnable on its own: `npm run db:seed:demo-flow -w apps/api`.
+  console.log(await seedDemoFlow(db))
 }
 
 // CLI entry point — `npm run db:seed -w apps/api`. db/reset.ts imports

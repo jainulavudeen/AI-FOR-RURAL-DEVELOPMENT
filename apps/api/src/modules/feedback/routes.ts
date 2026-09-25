@@ -1,4 +1,4 @@
-import { desc, eq, notInArray, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import { applicants, appeals, auditLog, feedbackFlags, reports } from '../../db/schema/index.js'
 import { getCurrentSchemeRuleVersion } from '../schemeRouter/service.js'
@@ -18,6 +18,8 @@ import {
   type OfficerLoad,
 } from './service.js'
 import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types.js'
+import { findCoveringOfficerIds, resolveReportLocation } from '../../lib/jurisdiction.js'
+import { officerCanSeeReport } from '../../lib/officerAccess.js'
 
 // 'escalated' is deliberately excluded — it's only ever reachable through
 // the dedicated escalate/sweep-sla routes below (which record a reason and
@@ -78,17 +80,23 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
       return row
     },
 
-    getOfficerLoads: async (): Promise<OfficerLoad[]> => {
+    // Jurisdiction-routed, same rule as applications (lib/jurisdiction.ts):
+    // only active officers covering the report's block, least open appeals.
+    getOfficerLoads: async (inputs): Promise<OfficerLoad[]> => {
+      const { districtId, blockId } = await resolveReportLocation(fastify.db, inputs)
+      if (!districtId) return []
+      const covering = await findCoveringOfficerIds(fastify.db, districtId, blockId)
+      if (covering.length === 0) return []
       const rows = await fastify.db
         .select({
-          officerId: applicants.id,
-          openCount: sql<number>`count(${appeals.id}) filter (where ${appeals.status} not in ('resolved', 'rejected'))`,
+          officerId: appeals.assignedOfficerId,
+          openCount: sql<number>`count(*)::int`,
         })
-        .from(applicants)
-        .leftJoin(appeals, eq(appeals.assignedOfficerId, applicants.id))
-        .where(eq(applicants.role, 'officer'))
-        .groupBy(applicants.id)
-      return rows.map((r) => ({ officerId: r.officerId, openCount: Number(r.openCount) }))
+        .from(appeals)
+        .where(and(inArray(appeals.assignedOfficerId, covering.map((c) => c.officerId)), notInArray(appeals.status, ['resolved', 'rejected'])))
+        .groupBy(appeals.assignedOfficerId)
+      const openById = new Map(rows.map((r) => [r.officerId, Number(r.openCount)]))
+      return covering.map((c) => ({ officerId: c.officerId, scope: c.scope, openCount: openById.get(c.officerId) ?? 0 }))
     },
 
     insertAppeal: async ({ applicantId, reportId, assignedOfficerId }) => {
@@ -161,6 +169,7 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
       return row?.phone ?? null
     },
 
+    officerCanSeeReport: (reportId, officerId) => officerCanSeeReport(fastify.db, reportId, officerId),
     getReportById: async (reportId) => {
       const [row] = await fastify.db.select().from(reports).where(eq(reports.id, reportId)).limit(1)
       if (!row) return null
@@ -182,7 +191,7 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }
 
-  fastify.post<{ Body: FlagRequestBody }>('/flag', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: FlagRequestBody }>('/flag', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const { sourceTable, sourceRowId, reason } = request.body ?? {}
     if (!sourceTable || !sourceRowId || !reason) {
       return reply.status(400).send({ error: { message: 'sourceTable, sourceRowId and reason are required', code: 'BAD_REQUEST' } })
@@ -191,7 +200,7 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send({ id: flag.id })
   })
 
-  fastify.post<{ Body: AppealRequestBody }>('/appeal', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: AppealRequestBody }>('/appeal', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const { inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource } = request.body ?? {}
     if (!inputs || typeof score !== 'number' || !verdictKey || !matchedSchemeId) {
       return reply.status(400).send({ error: { message: 'inputs, score, verdictKey and matchedSchemeId are required', code: 'BAD_REQUEST' } })
@@ -202,7 +211,7 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Best-effort report persistence for the peer-benchmark feature — see
   // service.ts's saveReport. Same body shape as /appeal, no appeal created.
-  fastify.post<{ Body: AppealRequestBody }>('/report', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: AppealRequestBody }>('/report', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const { inputs, score, verdictKey, matchedSchemeId, emiSchedule, marginCapitalSource } = request.body ?? {}
     if (!inputs || typeof score !== 'number' || !verdictKey || !matchedSchemeId) {
       return reply.status(400).send({ error: { message: 'inputs, score, verdictKey and matchedSchemeId are required', code: 'BAD_REQUEST' } })
@@ -214,7 +223,7 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
   // Applicant-initiated escalation — see service.ts's applicantEscalateAppeal
   // and escalation.ts for the state machine. Ownership-checked: only the
   // applicant who filed the appeal may escalate it.
-  fastify.post<{ Params: { id: string } }>('/appeals/:id/escalate', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/appeals/:id/escalate', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const appeal = await applicantEscalateAppeal(deps, request.user.sub, request.params.id)
     return reply.status(200).send(appeal)
   })
@@ -222,7 +231,7 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
   // Officer-triggered SLA sweep (see service.ts's sweepSlaBreaches for why
   // this is a button, not a cron, in this repo). Returns every appeal it
   // escalated this run.
-  fastify.post('/appeals/sweep-sla', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/appeals/sweep-sla', { preHandler: [fastify.requireRole('officer', 'admin')] }, async (request, reply) => {
     const escalated = await sweepSlaBreaches(deps, request.user.role)
     return reply.status(200).send(escalated)
   })
@@ -232,19 +241,19 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
   // for (see service.ts's getReportById doc comment). No field here is
   // ever recomputed against whatever scheme_rules is "current" at read
   // time; it's a straight SELECT of the row insertReport/saveReport wrote.
-  fastify.get<{ Params: { id: string } }>('/reports/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>('/reports/:id', { preHandler: [fastify.requireRole('applicant', 'officer', 'admin')] }, async (request, reply) => {
     const report = await getReportByIdService(deps, request.user.sub, request.user.role, request.params.id)
     return reply.status(200).send(report)
   })
 
-  fastify.get('/queue', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/queue', { preHandler: [fastify.requireRole('officer')] }, async (request, reply) => {
     const queue = await getOfficerQueueService(deps, request.user.role, request.user.sub)
     return reply.status(200).send(queue)
   })
 
   fastify.patch<{ Params: { id: string }; Body: UpdateAppealBody }>(
     '/appeals/:id',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [fastify.requireRole('officer')] },
     async (request, reply) => {
       const { status, resolutionNote } = request.body ?? {}
       if (!status || !VALID_STATUSES.includes(status)) {

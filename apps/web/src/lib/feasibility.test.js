@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateFeasibility, applyRealFactors } from './feasibility'
+import { generateFeasibility, applyRealFactors, applyLiveCompetition } from './feasibility'
 
 // Regression coverage for item 4: generateFeasibility must no longer
 // fabricate demand/infrastructure/market numbers (CLAUDE.md: "hashes the
@@ -70,5 +70,32 @@ describe('applyRealFactors', () => {
     // insights (a separate, still-seeded concern per CLAUDE.md's Known
     // Gaps — out of scope for item 4's score-only fix) survive the swap.
     expect(result.insights).toBe(baseline.insights)
+  })
+})
+
+describe('applyLiveCompetition (Google, low weight, display only)', () => {
+  const base = { score: 70, verdictKey: 'verdict.moderate', factors: [{ labelKey: 'results.factorBaseline', value: 70, isBaseline: true }] }
+
+  it('adds nothing to the score for a low count — "few results" may mean unmapped', () => {
+    const result = applyLiveCompetition(base, { count: 2, capped: false, retrievedAt: '2026-09-25T00:00:00Z' })
+    expect(result.score).toBe(70)
+    expect(result.factors.at(-1)).toMatchObject({ labelKey: 'results.factorLiveCompetition', value: 0, source: { label: 'google_live' } })
+  })
+
+  it('applies at most -2 for a dense (capped) result', () => {
+    const result = applyLiveCompetition(base, { count: 20, capped: true })
+    expect(result.score).toBe(68)
+    expect(result.governmentScore).toBe(70)
+  })
+
+  it('never moves the verdict band, so it can never on its own make a business read as unviable', () => {
+    const atEdge = { ...base, score: 45, verdictKey: 'verdict.marginal' }
+    const result = applyLiveCompetition(atEdge, { count: 20, capped: true })
+    expect(result.verdictKey).toBe('verdict.marginal')
+    expect(result.score).toBe(45)
+  })
+
+  it('is a no-op when there is no live data', () => {
+    expect(applyLiveCompetition(base, null)).toBe(base)
   })
 })

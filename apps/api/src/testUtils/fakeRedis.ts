@@ -45,8 +45,11 @@ export function createFakeRedis(): FakeRedis {
       return store.delete(key) ? 1 : 0
     },
     async incr(key) {
+      return this.incrby(key, 1)
+    },
+    async incrby(key, increment) {
       const current = readLive(key)
-      const next = (current ? Number(current.value) : 0) + 1
+      const next = (current ? Number(current.value) : 0) + increment
       store.set(key, { value: String(next), expiresAt: current?.expiresAt ?? null })
       return next
     },

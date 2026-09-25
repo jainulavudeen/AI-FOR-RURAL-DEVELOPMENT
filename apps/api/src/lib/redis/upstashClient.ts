@@ -30,6 +30,7 @@ export function createUpstashClient(url: string, token: string): RedisLike {
     },
     del: (key) => client.del(key),
     incr: (key) => client.incr(key),
+    incrby: (key, increment) => client.incrby(key, increment),
     expire: (key, seconds) => client.expire(key, seconds),
     ttl: (key) => client.ttl(key),
     quit: () => Promise.resolve(),

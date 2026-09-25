@@ -7,7 +7,7 @@
 // BASE_SCORE/clampScore/classifyVerdict come from @setu/core so this offline
 // seeded mock and apps/api's real data-backed assembly never silently drift
 // apart on the non-financial scoring constants they share.
-import { BASE_SCORE, DEFAULT_BASE_SCORE, clampScore, classifyVerdict } from '@setu/core'
+import { BASE_SCORE, DEFAULT_BASE_SCORE, clampScore, classifyVerdict, liveCompetitionAdjustment } from '@setu/core'
 import { BUSINESS_TYPES } from '../data/businesses'
 
 // A suggestion only earns its place on the report if the gap is real, not
@@ -200,5 +200,33 @@ export function applyRealFactors(feasibility, real) {
     usedAiEstimate: Boolean(real.usedAiEstimate),
     narration: real.narration,
     isEstimate: false,
+  }
+}
+
+// Adds the live Google competition-density factor to an already-assembled
+// (government-data) feasibility result, for DISPLAY only — Results.jsx
+// saves and appeals against the government-only score, never this one.
+// The weighting and the "never changes the verdict" guard live in
+// @setu/core's liveCompetitionAdjustment, not here. A zero adjustment
+// (low count, which may just mean "unmapped") is still listed, so the
+// user sees the lookup happened and why it didn't move anything.
+export function applyLiveCompetition(feasibility, competition) {
+  if (!competition) return feasibility
+  const adjustment = liveCompetitionAdjustment(feasibility.score, competition.count, competition.capped)
+  const score = clampScore(feasibility.score + adjustment.value)
+  return {
+    ...feasibility,
+    score,
+    verdictKey: classifyVerdict(score),
+    factors: [
+      ...feasibility.factors,
+      {
+        labelKey: 'results.factorLiveCompetition',
+        value: adjustment.value,
+        // Local calendar date (en-CA gives YYYY-MM-DD): a lookup at 1am IST is "today", not yesterday's UTC date.
+        source: { label: 'google_live', asOf: competition.retrievedAt ? new Date(competition.retrievedAt).toLocaleDateString('en-CA') : null },
+      },
+    ],
+    governmentScore: feasibility.score,
   }
 }

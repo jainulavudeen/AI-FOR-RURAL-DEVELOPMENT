@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { FileText, Printer, ShieldCheck, Stamp, Clock } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { FileText, Printer, ShieldCheck, Stamp, Clock, ClipboardCheck } from 'lucide-react'
+import { SCHEMES } from '@setu/core'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 import { useAppData } from '../context/AppDataContext'
-import { generateBankDossier, getBankDossier, approveBankDossier } from '../lib/bankDossier'
+import { generateBankDossier, getBankDossier } from '../lib/bankDossier'
 import { formatINR } from '../lib/format'
 import { humanizeSlug } from '../lib/slug'
 import { BUSINESS_TYPES } from '../data/businesses'
@@ -21,7 +23,7 @@ const DATE_LOCALE = { en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN' }
 // "Download Report" button).
 export default function BankDossier() {
   const { t, language } = useI18n()
-  const { isAuthenticated, requestLogin, role } = useAuth()
+  const { role } = useAuth()
   const { selection } = useAppData()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -66,27 +68,6 @@ export default function BankDossier() {
     } else {
       setGenerateError(true)
     }
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="mx-auto max-w-3xl px-5 sm:px-8 py-14 sm:py-20 text-center">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-700 text-white mb-4">
-          <FileText size={22} />
-        </span>
-        <h1 className="text-2xl font-extrabold text-primary-900">{t('bankDossier.title')}</h1>
-        <div className="mt-8 rounded-3xl border border-primary-100 card-shadow-lg bg-white px-8 py-14">
-          <p className="text-sm text-ink-900/60">{t('bankDossier.signInPrompt')}</p>
-          <button
-            type="button"
-            onClick={requestLogin}
-            className="mt-5 inline-flex items-center rounded-full bg-amber-500 px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-400 transition-colors"
-          >
-            {t('bankDossier.signInCta')}
-          </button>
-        </div>
-      </div>
-    )
   }
 
   // Generation form — shown when there's no :id in the URL yet.
@@ -152,78 +133,11 @@ export default function BankDossier() {
   }
 
   return (
-    <DossierView
-      dossier={dossier}
-      t={t}
-      language={language}
-      isOfficer={role === 'officer'}
-      onApproved={(approval) => setDossier((prev) => (prev ? { ...prev, latestApproval: approval } : prev))}
-    />
+    <DossierView dossier={dossier} t={t} language={language} role={role} />
   )
 }
 
-function ApprovalPanel({ dossierId, t, onApproved }) {
-  const [officerName, setOfficerName] = useState('')
-  const [officerDesignation, setOfficerDesignation] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState(null)
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setSubmitting(true)
-    setError(null)
-    const result = await approveBankDossier(dossierId, {
-      officerName: officerName.trim(),
-      officerDesignation: officerDesignation.trim(),
-    })
-    setSubmitting(false)
-    if (result.ok && result.data) {
-      onApproved(result.data)
-      setOfficerName('')
-      setOfficerDesignation('')
-    } else {
-      setError(result.data?.error?.message ?? t('bankDossier.approveError'))
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="no-print mb-6 rounded-2xl border border-teal-600/30 bg-teal-50/50 p-5 space-y-3">
-      <p className="flex items-center gap-1.5 text-[13px] font-bold text-teal-800">
-        <Stamp size={14} />
-        {t('bankDossier.approvalPanelTitle')}
-      </p>
-      <p className="text-[11.5px] text-teal-900/70">{t('bankDossier.approvalPanelHint')}</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <input
-          type="text"
-          required
-          value={officerName}
-          onChange={(e) => setOfficerName(e.target.value)}
-          placeholder={t('bankDossier.officerNamePlaceholder')}
-          className="rounded-xl border border-teal-600/30 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-teal-600 focus:outline-none"
-        />
-        <input
-          type="text"
-          required
-          value={officerDesignation}
-          onChange={(e) => setOfficerDesignation(e.target.value)}
-          placeholder={t('bankDossier.officerDesignationPlaceholder')}
-          className="rounded-xl border border-teal-600/30 bg-white px-3 py-2.5 text-sm text-ink-900 focus:border-teal-600 focus:outline-none"
-        />
-      </div>
-      {error && <p className="text-[12px] text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-full bg-teal-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-teal-600 disabled:opacity-50 transition-colors"
-      >
-        {submitting ? t('bankDossier.approving') : t('bankDossier.approveCta')}
-      </button>
-    </form>
-  )
-}
-
-function DossierView({ dossier, t, language, isOfficer, onApproved }) {
+function DossierView({ dossier, t, language, role }) {
   const s = dossier.snapshot
   // Real nationwide names — the dossier snapshot only freezes ids
   // (DossierSnapshot has no name fields), so this humanizes the slug
@@ -233,6 +147,11 @@ function DossierView({ dossier, t, language, isOfficer, onApproved }) {
   const stateLabel = s.stateId ? humanizeSlug(s.stateId) : ''
   const districtLabel = s.districtId ? humanizeSlug(s.districtId) : ''
   const business = BUSINESS_TYPES.find((b) => b.id === s.businessId)
+
+  // Sections are numbered in render order — the "report under review"
+  // section only exists on dossiers frozen at application submit.
+  let sectionCounter = 0
+  const nextSection = () => ++sectionCounter
 
   const monthlyDebtServiceHeadroom = s.financial.summary.netSurplus / Math.max(1, s.financial.summary.monthBuckets.length)
 
@@ -246,11 +165,19 @@ function DossierView({ dossier, t, language, isOfficer, onApproved }) {
           className="inline-flex items-center gap-1.5 rounded-full bg-primary-700 px-5 py-2.5 text-[13px] font-bold text-white hover:bg-primary-800 transition-colors"
         >
           <Printer size={15} />
-          {t('bankDossier.printCta')}
+          {dossier.approval ? t('bankDossier.downloadVerifiedCta') : t('bankDossier.printCta')}
         </button>
       </div>
 
-      {isOfficer && <ApprovalPanel dossierId={dossier.id} t={t} onApproved={onApproved} />}
+      {role === 'officer' && !dossier.approval && (
+        <Link
+          to="/review"
+          className="no-print mb-6 flex items-center gap-2 rounded-2xl border border-teal-600/30 bg-teal-50/50 px-4 py-3 text-[12.5px] font-semibold text-teal-800 hover:bg-teal-50"
+        >
+          <ClipboardCheck size={15} />
+          {t('bankDossier.decideInQueue')}
+        </Link>
+      )}
 
       <div className="dossier-print rounded-3xl border border-primary-100 bg-white p-6 sm:p-10 print:rounded-none print:border-none">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-primary-100 pb-4 mb-6">
@@ -278,7 +205,7 @@ function DossierView({ dossier, t, language, isOfficer, onApproved }) {
 
         <h1 className="text-xl font-extrabold text-primary-900 mb-6">{t('bankDossier.documentTitle')}</h1>
 
-        <Section number={1} title={t('bankDossier.section1Title')}>
+        <Section number={nextSection()} title={t('bankDossier.section1Title')}>
           <FactGrid
             items={[
               [t('bankDossier.proprietorNameLabel'), s.proprietorName || t('bankDossier.notCaptured')],
@@ -291,7 +218,20 @@ function DossierView({ dossier, t, language, isOfficer, onApproved }) {
           />
         </Section>
 
-        <Section number={2} title={t('bankDossier.section2Title')}>
+        {s.report && (
+          <Section number={nextSection()} title={t('bankDossier.reportSectionTitle')}>
+            <FactGrid
+              items={[
+                [t('bankDossier.reportScoreLabel'), `${s.report.score} · ${t(s.report.verdictKey)}`],
+                [t('bankDossier.reportSchemeLabel'), SCHEMES[s.report.matchedSchemeId] ? t(SCHEMES[s.report.matchedSchemeId].nameKey) : s.report.matchedSchemeId],
+                [t('bankDossier.reportMarginLabel'), s.report.margin != null ? formatINR(s.report.margin) : t('bankDossier.notCaptured')],
+                [t('bankDossier.reportDateLabel'), new Date(s.report.reportCreatedAt).toLocaleDateString(DATE_LOCALE[language] || 'en-IN')],
+              ]}
+            />
+          </Section>
+        )}
+
+        <Section number={nextSection()} title={t('bankDossier.section2Title')}>
           <div className="flex items-center gap-4 mb-3">
             <p className="text-3xl font-extrabold text-primary-900">
               {s.financial.creditScore.score}
@@ -307,7 +247,7 @@ function DossierView({ dossier, t, language, isOfficer, onApproved }) {
           />
         </Section>
 
-        <Section number={3} title={t('bankDossier.section3Title')}>
+        <Section number={nextSection()} title={t('bankDossier.section3Title')}>
           <FactGrid
             items={[
               [t('bankDossier.grossSalesLabel'), formatINR(s.financial.summary.totalSales)],
@@ -327,7 +267,7 @@ function DossierView({ dossier, t, language, isOfficer, onApproved }) {
           )}
         </Section>
 
-        <Section number={4} title={t('bankDossier.section4Title')}>
+        <Section number={nextSection()} title={t('bankDossier.section4Title')}>
           {s.financial.topMatches.length === 0 ? (
             <p className="text-[12.5px] text-ink-900/45">{t('bankDossier.noMatches')}</p>
           ) : (
@@ -354,51 +294,64 @@ function DossierView({ dossier, t, language, isOfficer, onApproved }) {
           )}
         </Section>
 
-        <Section number={5} title={t('bankDossier.section5Title')}>
+        <Section number={nextSection()} title={t('bankDossier.section5Title')}>
           <p className="text-[11.5px] text-ink-900/60 leading-relaxed">{t('bankDossier.authenticationBody', { ref: s.docRef })}</p>
         </Section>
 
-        <ApprovalBlock approval={dossier.latestApproval} t={t} language={language} />
+        <ApprovalBlock approval={dossier.approval} verifyUrl={dossier.verifyUrl} qrSvg={dossier.qrSvg} t={t} language={language} />
       </div>
     </div>
   )
 }
 
-// Always prints something here — "APPROVED" with real detail, or a clear
-// "Pending review" — never blank. CLAUDE.md item 7: call this "Verified
-// Approval", never "digitally signed" (no government DSC exists in this
-// app). The signature hash is printed so a bank can check it themselves
-// at GET /bank-dossier/verify/:hash with no Setu login needed.
-function ApprovalBlock({ approval, t, language }) {
+// Always prints something here — the VERIFIED APPROVAL block with real
+// detail, or a clear "Pending review" — never blank. Never called "digitally
+// signed": there is no government DSC here. The hash is sha256(application
+// id + officer id + timestamp + server secret); the QR (rendered by the API
+// as SVG, so the web ships no QR library) opens the public /verify page,
+// which confirms the hash against Setu's records and reveals only who
+// approved it and when.
+function ApprovalBlock({ approval, verifyUrl, qrSvg, t, language }) {
   return (
-    <div className="mt-2 rounded-2xl border-2 border-dashed border-primary-200 p-5">
+    <div className="mt-2 rounded-2xl border-2 border-dashed border-primary-200 p-5 break-inside-avoid">
       <p className="text-[11px] font-bold uppercase tracking-wide text-primary-600 mb-3">{t('bankDossier.approvalSectionTitle')}</p>
       {approval ? (
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-700 px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white mb-3">
-            <Stamp size={13} />
-            {t('bankDossier.approvedStamp')}
-          </span>
-          <FactGrid
-            items={[
-              [t('bankDossier.approvedByLabel'), approval.officerName],
-              [t('bankDossier.officerDesignationLabel'), approval.officerDesignation],
-              [t('bankDossier.officerIdLabel'), approval.officerId],
-              [
-                t('bankDossier.approvedAtLabel'),
-                new Date(approval.approvedAt).toLocaleString(DATE_LOCALE[language] || 'en-IN', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-              ],
-            ]}
-          />
-          <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-ink-900/35">{t('bankDossier.signatureHashLabel')}</p>
-          <p className="font-mono text-[10.5px] text-ink-900/70 break-all">{approval.signatureHash}</p>
-          <p className="mt-2 text-[10.5px] text-ink-900/45 leading-snug">{t('bankDossier.verifyInstructions')}</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="min-w-0 flex-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-700 px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide text-white mb-3">
+              <Stamp size={13} />
+              {t('bankDossier.approvedStamp')}
+            </span>
+            {!approval.current && <p className="mb-3 text-[12px] font-semibold text-amber-700">{t('bankDossier.supersededNote')}</p>}
+            <FactGrid
+              wrap
+              items={[
+                [t('bankDossier.approvedByLabel'), approval.officerName],
+                [t('bankDossier.officerDesignationLabel'), approval.officerDesignation],
+                [
+                  t('bankDossier.approvedAtLabel'),
+                  new Date(approval.approvedAt).toLocaleString(DATE_LOCALE[language] || 'en-IN', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                ],
+              ]}
+            />
+            <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-ink-900/35">{t('bankDossier.signatureHashLabel')}</p>
+            <p className="font-mono text-[10.5px] text-ink-900/70 break-all">{approval.signatureHash}</p>
+            <p className="mt-2 text-[10.5px] text-ink-900/45 leading-snug">{t('bankDossier.verifyInstructions')}</p>
+            {verifyUrl && <p className="mt-1 font-mono text-[10px] text-ink-900/45 break-all">{verifyUrl}</p>}
+          </div>
+          {qrSvg && (
+            <div className="shrink-0 self-center text-center sm:self-start">
+              {/* Server-generated SVG from our own API (lib/qr.ts), not user content. */}
+              <div className="h-[132px] w-[132px] bg-white" role="img" aria-label={t('bankDossier.qrAlt')} dangerouslySetInnerHTML={{ __html: qrSvg }} />
+              <p className="mt-1 text-[10px] font-semibold text-ink-900/50">{t('bankDossier.scanToVerify')}</p>
+            </div>
+          )}
         </div>
       ) : (
         <p className="flex items-center gap-1.5 text-[12.5px] font-bold text-amber-700">
@@ -421,13 +374,15 @@ function Section({ number, title, children }) {
   )
 }
 
-function FactGrid({ items, columns = 2 }) {
+// `wrap`: show the full value (the approval block must never cut off an
+// officer's designation or the approval time on a printed document).
+function FactGrid({ items, columns = 2, wrap = false }) {
   return (
     <div className={`grid grid-cols-2 sm:grid-cols-${columns} gap-3`}>
       {items.map(([label, value]) => (
         <div key={label} className="rounded-xl bg-primary-50/50 px-3 py-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-900/35">{label}</p>
-          <p className="text-[12.5px] font-bold text-primary-900 mt-0.5 truncate">{value}</p>
+          <p className={`text-[12.5px] font-bold text-primary-900 mt-0.5 ${wrap ? 'break-words' : 'truncate'}`}>{value}</p>
         </div>
       ))}
     </div>

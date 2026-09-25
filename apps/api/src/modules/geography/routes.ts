@@ -51,11 +51,13 @@ const geographyRoutes: FastifyPluginAsync = async (fastify) => {
     },
     listBlocks: async (districtUuid: string) => {
       const rows = await fastify.db
-        .select({ name: blocks.name })
+        .select({ id: blocks.id, name: blocks.name })
         .from(blocks)
         .where(and(eq(blocks.districtId, districtUuid), isNotNull(blocks.code)))
         .orderBy(asc(blocks.name))
-      return rows.map((r) => ({ id: r.name, name: humanizeSlug(r.name) }))
+      // uuid is additive (the Admin Portal's officer-jurisdiction picker
+      // needs a real block id); the Wizard keeps using the name `id`.
+      return rows.map((r) => ({ id: r.name, uuid: r.id, name: humanizeSlug(r.name) }))
     },
   }
 

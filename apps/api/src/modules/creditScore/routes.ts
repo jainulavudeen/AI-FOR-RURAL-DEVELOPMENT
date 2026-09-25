@@ -23,7 +23,7 @@ const creditScoreRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }
 
-  fastify.get('/me', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/me', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const result = await getCreditScore(deps, request.user.sub)
     return reply.status(200).send(result)
   })

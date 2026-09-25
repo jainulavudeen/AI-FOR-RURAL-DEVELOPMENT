@@ -37,11 +37,21 @@ export class ValidationError extends Error {
   }
 }
 
+export class ConflictError extends Error {
+  statusCode = 409
+  code = 'CONFLICT'
+  constructor(message: string) {
+    super(message)
+    this.name = 'ConflictError'
+  }
+}
+
 // The one gate every function below goes through — enforced here, not just
 // by hiding the Admin Portal's UI (CLAUDE.md item 6's explicit ask). An
 // officer's token, correctly, gets exactly the same ForbiddenError an
-// applicant's would.
-function assertAdmin(role: string): void {
+// applicant's would. (Routes also carry fastify.requireRole('admin'); this
+// is the second, service-level layer.)
+export function assertAdmin(role: string): void {
   if (role !== 'admin') throw new ForbiddenError('Admin role required')
 }
 
@@ -53,7 +63,7 @@ export interface AppealStatRow {
 }
 
 export interface AdminDeps {
-  listOfficers: () => Promise<Array<{ id: string; phone: string }>>
+  listOfficers: () => Promise<Array<{ id: string; phone: string | null }>>
   // Every appeal's officer/status/timestamps, unfiltered — small enough at
   // this scale to aggregate in JS (see getOfficerStats) rather than a
   // hand-rolled SQL aggregation per stat.

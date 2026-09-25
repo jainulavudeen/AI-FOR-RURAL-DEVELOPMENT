@@ -3,7 +3,56 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Menu, X, Landmark } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
+import { useAuth } from '../context/AuthContext'
 import AuthControl from './AuthControl'
+
+// What each role's nav shows — only pages that role can actually use
+// (lib/routeAccess.js + App.jsx enforce the same). Hiding a link is not
+// access control; the API checks every call regardless. Signed in, the
+// public Home page moves under "More" (the logo also links to it) so the
+// applicant's row fits at 1280px.
+const NAV_BY_ROLE = {
+  signedOut: {
+    primary: [{ to: '/', key: 'nav.home', end: true }],
+    more: [{ to: '/architecture', key: 'nav.architecture' }],
+  },
+  applicant: {
+    primary: [
+      { to: '/dashboard', key: 'nav.myDashboard' },
+      { to: '/eligibility', key: 'nav.checkEligibility' },
+      { to: '/bahi-khata', key: 'nav.bahiKhata' },
+      { to: '/credit-score', key: 'nav.creditScore' },
+      { to: '/advisor-saathi', key: 'nav.advisorSaathi' },
+      { to: '/schemes', key: 'nav.schemes' },
+    ],
+    more: [
+      { to: '/', key: 'nav.home', end: true },
+      { to: '/bank-dossier', key: 'nav.bankDossier', end: true },
+      { to: '/account', key: 'nav.account' },
+      { to: '/architecture', key: 'nav.architecture' },
+    ],
+  },
+  officer: {
+    primary: [
+      { to: '/review', key: 'nav.reviewQueue' },
+    ],
+    more: [
+      { to: '/', key: 'nav.home', end: true },
+      { to: '/account', key: 'nav.account' },
+      { to: '/architecture', key: 'nav.architecture' },
+    ],
+  },
+  admin: {
+    primary: [
+      { to: '/admin', key: 'nav.admin' },
+    ],
+    more: [
+      { to: '/', key: 'nav.home', end: true },
+      { to: '/account', key: 'nav.account' },
+      { to: '/architecture', key: 'nav.architecture' },
+    ],
+  },
+}
 
 function LanguageSwitcher() {
   const { language, setLanguage, languages } = useI18n()
@@ -102,27 +151,16 @@ function MoreMenu({ links }) {
 
 export default function Navbar() {
   const { t } = useI18n()
+  const { isAuthenticated, role } = useAuth()
   const [open, setOpen] = useState(false)
   const closeMenu = () => setOpen(false)
   const toggleMenu = () => setOpen((v) => !v)
 
   // The full row (primary + "More") is what the mobile menu flattens back
-  // out to one list — keep this the single source of truth for link order.
-  const primaryLinks = [
-    { to: '/', key: 'nav.home', end: true },
-    { to: '/dashboard', key: 'nav.dashboard' },
-    { to: '/eligibility', key: 'nav.checkEligibility' },
-    { to: '/bahi-khata', key: 'nav.bahiKhata' },
-    { to: '/credit-score', key: 'nav.creditScore' },
-    { to: '/advisor-saathi', key: 'nav.advisorSaathi' },
-    { to: '/schemes', key: 'nav.schemes' },
-  ]
-  const moreLinks = [
-    { to: '/bank-dossier', key: 'nav.bankDossier' },
-    { to: '/architecture', key: 'nav.architecture' },
-    { to: '/partners', key: 'nav.partners' },
-    { to: '/admin', key: 'nav.admin' },
-  ]
+  // out to one list — keep NAV_BY_ROLE the single source of truth.
+  const nav = (isAuthenticated && NAV_BY_ROLE[role]) || NAV_BY_ROLE.signedOut
+  const primaryLinks = nav.primary
+  const moreLinks = nav.more
   const links = [...primaryLinks, ...moreLinks]
 
   return (
@@ -174,8 +212,8 @@ export default function Navbar() {
       <AnimatePresence>
         {open && (
           // Two separate panels, not one. AuthControl itself has no popover
-          // now (sign-in opens the global, fixed-position AuthModal
-          // mounted at the App root, not a dropdown anchored here), but the
+          // (sign-in navigates to the /signin page, not a dropdown anchored
+          // here), but the
           // split is kept: the links panel needs overflow-hidden for its
           // 0->auto height slide, and keeping controls in their own
           // opacity-only panel avoids re-introducing that clipping risk if

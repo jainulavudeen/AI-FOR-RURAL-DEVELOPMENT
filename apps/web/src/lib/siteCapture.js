@@ -5,12 +5,12 @@
 // postQueueable. If either changes, check the other.
 import { authorizedFetch } from './auth'
 
-export async function uploadSiteCapture({ reportId, digipin, latitude, longitude, photoDataUrl, consentAt }) {
+export async function uploadSiteCapture({ reportId, digipin, latitude, longitude, photoDataUrl, consentAt, confirmedAddress = null, addressSource = null }) {
   try {
     const response = await authorizedFetch('/site-capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reportId, digipin, latitude, longitude, photoDataUrl, consentAt }),
+      body: JSON.stringify({ reportId, digipin, latitude, longitude, photoDataUrl, consentAt, confirmedAddress, addressSource }),
     })
     const data = await response.json().catch(() => ({}))
     return { ok: response.ok, status: response.status, data, queued: false }

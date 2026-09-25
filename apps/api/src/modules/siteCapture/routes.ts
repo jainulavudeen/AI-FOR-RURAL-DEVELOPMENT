@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { reports, siteCaptures } from '../../db/schema/index.js'
 import { createSiteCapture, getSiteCapturesForReport, type SiteCaptureDeps } from './service.js'
 import type { CreateSiteCaptureBody, SiteCapture } from './types.js'
+import { officerCanSeeReport } from '../../lib/officerAccess.js'
 
 function rowToSiteCapture(row: typeof siteCaptures.$inferSelect): SiteCapture {
   return {
@@ -14,6 +15,8 @@ function rowToSiteCapture(row: typeof siteCaptures.$inferSelect): SiteCapture {
     longitude: row.longitude,
     photoDataUrl: row.photoDataUrl,
     consentAt: row.consentAt.toISOString(),
+    confirmedAddress: row.confirmedAddress,
+    addressSource: row.addressSource as SiteCapture['addressSource'],
     createdAt: row.createdAt.toISOString(),
   }
 }
@@ -31,20 +34,21 @@ const siteCaptureRoutes: FastifyPluginAsync = async (fastify) => {
       const rows = await fastify.db.select().from(siteCaptures).where(eq(siteCaptures.reportId, reportId))
       return rows.map(rowToSiteCapture)
     },
+    officerCanSeeReport: (reportId, officerId) => officerCanSeeReport(fastify.db, reportId, officerId),
     getReportOwner: async (reportId) => {
       const [row] = await fastify.db.select({ applicantId: reports.applicantId }).from(reports).where(eq(reports.id, reportId)).limit(1)
       return row?.applicantId ?? null
     },
   }
 
-  fastify.post<{ Body: CreateSiteCaptureBody }>('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: CreateSiteCaptureBody }>('/', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const capture = await createSiteCapture(deps, request.user.sub, request.body ?? ({} as CreateSiteCaptureBody))
     return reply.status(201).send(capture)
   })
 
   fastify.get<{ Params: { reportId: string } }>(
     '/report/:reportId',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [fastify.requireRole('applicant', 'officer', 'admin')] },
     async (request, reply) => {
       const captures = await getSiteCapturesForReport(deps, request.user.sub, request.user.role, request.params.reportId)
       return reply.status(200).send(captures)

@@ -1,19 +1,24 @@
-import { LogIn, LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { LogIn, LogOut, UserRound } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../context/AuthContext'
 
-// Lean sign-in/out control, safe to mount more than once (desktop bar +
-// mobile menu) since it holds no popover state of its own — it only reads
-// shared AuthContext and opens the single global AuthModal via
-// requestLogin(). See AuthModal.jsx for why the popover moved out of here.
+// Sign-in/out control, mounted in both the desktop bar and the mobile
+// menu. "Sign in" always goes to the one sign-in page (/signin) via
+// requestLogin(), which remembers where the user was.
 export default function AuthControl() {
   const { t } = useI18n()
-  const { phone, isAuthenticated, logout, requestLogin } = useAuth()
+  const { isAuthenticated, displayName, phone, email, role, logout, requestLogin } = useAuth()
 
   if (isAuthenticated) {
+    const who = displayName || phone || email
     return (
       <div className="flex items-center gap-3">
-        <span className="hidden sm:inline text-xs text-ink-900/60">{t('auth.signedInAs', { phone })}</span>
+        <Link to="/account" className="hidden 2xl:inline-flex items-center gap-1.5 text-xs text-ink-900/60 hover:text-primary-700">
+          <UserRound size={13} />
+          <span className="max-w-[10rem] truncate">{who}</span>
+          <span className="rounded-full bg-primary-50 px-2 py-0.5 text-[10.5px] font-bold text-primary-700">{t(`roles.${role}`)}</span>
+        </Link>
         <button
           type="button"
           onClick={logout}

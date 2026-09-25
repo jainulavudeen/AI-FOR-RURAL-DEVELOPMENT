@@ -10,6 +10,7 @@ const SOURCE_NOTE_KEYS = {
   real_block: 'results.sourceRealBlock',
   real_district: 'results.sourceRealDistrict',
   ai_estimated: 'results.sourceAiEstimated',
+  google_live: 'results.sourceGoogleLive',
 }
 
 export default function ScoreBreakdown({ factors, excludedFactors = [] }) {

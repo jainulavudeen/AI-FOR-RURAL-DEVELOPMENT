@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { DigipinOutOfBoundsError, encodeDigipin } from '../../ingestion/digipin/algorithm.js'
 import { estimateFeasibilityFactors, narrateReport } from '../grounding/service.js'
 import { createAgmarknetProvider } from './agmarknetProvider.js'
+import { getCensusFacilitiesNearPoint } from './censusFacilities.js'
 import { getCachedBlockId, getCachedDistrictId } from './districtBlockCache.js'
 import { createGeocodingProvider } from './geocodingProvider.js'
 import { getPeerBenchmark } from './peerBenchmark.js'
@@ -125,6 +126,20 @@ const feasibilityRoutes: FastifyPluginAsync = async (fastify) => {
       }
       throw err
     }
+  })
+
+  // Census 2011 facility figures for the Census village nearest a pin —
+  // the government half of the report's "Census vs live road distance"
+  // comparison (modules/googleMaps supplies the live half). Public and
+  // cacheable, unlike /google-maps/*: this is our own ingested data.
+  fastify.get<{ Querystring: { lat?: string; lon?: string } }>('/census-facilities', async (request, reply) => {
+    const lat = Number(request.query.lat)
+    const lon = Number(request.query.lon)
+    if (!request.query.lat || !request.query.lon || Number.isNaN(lat) || Number.isNaN(lon)) {
+      return reply.status(400).send({ error: { message: 'lat and lon are required numbers', code: 'BAD_REQUEST' } })
+    }
+    const result = await getCensusFacilitiesNearPoint(fastify.db, lat, lon)
+    return reply.header('Cache-Control', `public, max-age=${DISTRICT_REFERENCE_MAX_AGE}`).status(200).send({ census: result })
   })
 
   // Best-effort GPS -> state/district name resolution for the Wizard's

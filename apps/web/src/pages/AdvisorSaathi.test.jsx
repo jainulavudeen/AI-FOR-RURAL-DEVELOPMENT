@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { I18nProvider } from '../i18n/I18nContext'
 import { AuthProvider } from '../context/AuthContext'
 import { AppDataProvider } from '../context/AppDataContext'
@@ -9,11 +10,13 @@ import * as advisorSaathiLib from '../lib/advisorSaathi'
 function renderPage() {
   return render(
     <I18nProvider>
-      <AuthProvider>
-        <AppDataProvider>
-          <AdvisorSaathi />
-        </AppDataProvider>
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <AppDataProvider>
+            <AdvisorSaathi />
+          </AppDataProvider>
+        </AuthProvider>
+      </MemoryRouter>
     </I18nProvider>
   )
 }

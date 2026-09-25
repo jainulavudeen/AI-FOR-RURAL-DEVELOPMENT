@@ -92,6 +92,20 @@
       "when": 1790243184571,
       "tag": "0012_cultured_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790279403847,
+      "tag": "0013_site_capture_confirmed_address",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790285767630,
+      "tag": "0014_identity_roles_applications",
+      "breakpoints": true
     }
   ]
 }

@@ -159,7 +159,10 @@ function AppealRow({ appeal, t, onSaved }) {
   )
 }
 
-export default function OfficerDashboard() {
+// Rendered as the "Review requests" (appeals) tab inside ReviewQueue —
+// `embedded` drops its own page header. Appeals route to officers by the
+// same jurisdiction rule as applications (apps/api feedback/routes.ts).
+export default function OfficerDashboard({ embedded = false }) {
   const { t } = useI18n()
   const { isAuthenticated, role, requestLogin } = useAuth()
   const [query, setQuery] = useState('')
@@ -185,24 +188,29 @@ export default function OfficerDashboard() {
 
   const filtered = (queue ?? []).filter(
     (a) =>
-      a.applicantPhone.toLowerCase().includes(query.toLowerCase()) ||
+      (a.applicantPhone ?? '').toLowerCase().includes(query.toLowerCase()) ||
       (a.report?.inputs?.businessId ?? '').toLowerCase().includes(query.toLowerCase())
   )
 
   return (
-    <div className="mx-auto max-w-6xl px-5 sm:px-8 py-12 sm:py-16">
-      <div className="flex items-center gap-3 mb-2">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-700 text-white">
-          <Users size={20} />
-        </span>
-        <div>
-          <h1 className="text-2xl font-extrabold text-primary-900">{t('officer.title')}</h1>
-          <p className="text-sm text-ink-900/55">{t('officer.subtitle')}</p>
-        </div>
-      </div>
-      <p className="mt-3 mb-8 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 inline-block">
-        {t('officer.disclaimer')}
-      </p>
+    <div className={embedded ? '' : 'mx-auto max-w-6xl px-5 sm:px-8 py-12 sm:py-16'}>
+      {!embedded && (
+        <>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-700 text-white">
+              <Users size={20} />
+            </span>
+            <div>
+              <h1 className="text-2xl font-extrabold text-primary-900">{t('officer.title')}</h1>
+              <p className="text-sm text-ink-900/55">{t('officer.subtitle')}</p>
+            </div>
+          </div>
+          <p className="mt-3 mb-8 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 inline-block">
+            {t('officer.disclaimer')}
+          </p>
+        </>
+      )}
+      {embedded && <p className="mb-4 text-[12.5px] text-ink-900/55">{t('review.appealsExplainer')}</p>}
 
       {!canView && (
         <div className="rounded-3xl border border-primary-100 card-shadow-lg bg-white px-8 py-14 text-center">

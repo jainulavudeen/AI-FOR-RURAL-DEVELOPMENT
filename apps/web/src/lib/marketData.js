@@ -146,6 +146,23 @@ export async function getReverseGeocode(lat, lon) {
   }
 }
 
+// Census 2011 facility figures for the Census village nearest a pin — our
+// own government data, so (unlike lib/googleMaps.js) the service worker
+// may cache it and it still renders offline once seen. null = no Census
+// village near this pin, or unreachable.
+export async function getCensusFacilities(lat, lon) {
+  if (lat == null || lon == null) return null
+  try {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon) })
+    const response = await fetch(`${API_BASE}/feasibility/census-facilities?${params}`)
+    if (!response.ok) return null
+    const data = await response.json()
+    return data?.census ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function getPeerBenchmark(businessId, districtSlug, verdictKey) {
   if (!businessId || !districtSlug || !verdictKey) return FALLBACK_PEER_BENCHMARK
   try {

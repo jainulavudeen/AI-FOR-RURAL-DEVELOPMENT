@@ -4,7 +4,7 @@
 
 export interface OfficerStats {
   officerId: string
-  phone: string
+  phone: string | null
   pendingCount: number
   resolvedCount: number
   rejectedCount: number
@@ -17,7 +17,7 @@ export interface OfficerStats {
 export interface AdminReportListItem {
   id: string
   applicantId: string
-  applicantPhone: string
+  applicantPhone: string | null
   score: number
   verdictKey: string
   matchedSchemeId: string
@@ -34,7 +34,7 @@ export interface ReportFilters {
 export interface AdminAppealListItem {
   id: string
   applicantId: string
-  applicantPhone: string
+  applicantPhone: string | null
   reportId: string | null
   status: string
   assignedOfficerId: string | null
@@ -59,6 +59,8 @@ export interface AuditLogEntryView {
   id: string
   actorId: string
   actorRole: string
+  // Display name / phone / email of the actor, whichever exists.
+  actorLabel?: string | null
   action: string
   targetType: string
   targetId: string
@@ -69,4 +71,5 @@ export interface AuditLogEntryView {
 export interface AuditLogFilters {
   targetType?: string
   actorId?: string
+  targetId?: string
 }

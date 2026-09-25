@@ -1,48 +1,63 @@
-import { createContext, useContext, useMemo, useState } from 'react'
-import { getSession, logout as logoutRequest } from '../lib/auth'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { fetchMe, getSession, logout as logoutRequest } from '../lib/auth'
 
 const AuthContext = createContext(null)
 
+// Lives INSIDE BrowserRouter (see App.jsx) so that every gated action in
+// the app — the navbar's Sign in, a page's own gate, "Flag this data",
+// "Request human review" — funnels through requestLogin() to the ONE
+// sign-in page (/signin), carrying where the user was so they land back
+// there afterwards.
 export function AuthProvider({ children }) {
+  const navigate = useNavigate()
   const [session, setSession] = useState(() => getSession())
-  const [loginRequested, setLoginRequested] = useState(false)
-  const [returnTo, setReturnTo] = useState(null)
 
-  const login = (nextSession) => setSession(nextSession)
+  // The role cached in localStorage is only a first-render hint — refresh
+  // it from the server (which reads the DB) on load, so a role change or
+  // deactivation shows up without waiting for the next sign-in. Offline,
+  // fetchMe resolves undefined and the cached session is kept.
+  useEffect(() => {
+    if (!session?.accessToken) return
+    let cancelled = false
+    fetchMe().then((next) => {
+      if (cancelled || next === undefined) return
+      setSession(next)
+    })
+    return () => {
+      cancelled = true
+    }
+    // Only on mount / sign-in — not on every profile merge.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.accessToken])
 
-  const logout = async () => {
+  const login = useCallback((nextSession) => setSession(nextSession), [])
+
+  const logout = useCallback(async () => {
     await logoutRequest()
     setSession(null)
-  }
+    navigate('/')
+  }, [navigate])
 
-  // Lets any gated action anywhere in the app (Flag this data, Request
-  // Human Review, a page's own signed-out gate) ask the single global
-  // AuthModal to open, without those components needing to know it exists.
-  // Captures the current URL via window.location (not useLocation) because
-  // AuthProvider sits outside BrowserRouter — this still works since
-  // BrowserRouter drives window.location itself.
-  const requestLogin = () => {
-    setReturnTo(window.location.pathname + window.location.search)
-    setLoginRequested(true)
-  }
-  const clearLoginRequest = () => {
-    setLoginRequested(false)
-    setReturnTo(null)
-  }
+  const requestLogin = useCallback(() => {
+    const here = window.location.pathname + window.location.search
+    const next = here.startsWith('/signin') ? '' : `?next=${encodeURIComponent(here)}`
+    navigate(`/signin${next}`)
+  }, [navigate])
 
   const value = useMemo(
     () => ({
+      session,
       phone: session?.phone ?? null,
+      email: session?.email ?? null,
+      displayName: session?.displayName ?? null,
       role: session?.role ?? null,
       isAuthenticated: Boolean(session?.accessToken),
       login,
       logout,
-      loginRequested,
-      returnTo,
       requestLogin,
-      clearLoginRequest,
     }),
-    [session, loginRequested, returnTo]
+    [session, login, logout, requestLogin]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

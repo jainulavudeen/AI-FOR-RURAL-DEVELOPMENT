@@ -6,6 +6,7 @@ import errorHandlerPlugin from './plugins/errorHandler.js'
 import redisPlugin from './plugins/redis.js'
 import accountAggregatorModule from './modules/accountAggregator/index.js'
 import adminModule from './modules/admin/index.js'
+import applicationsModule from './modules/applications/index.js'
 import advisorSaathiModule from './modules/advisorSaathi/index.js'
 import authModule from './modules/auth/index.js'
 import bankDossierModule from './modules/bankDossier/index.js'
@@ -16,6 +17,7 @@ import creditScoreModule from './modules/creditScore/index.js'
 import feasibilityModule from './modules/feasibility/index.js'
 import feedbackModule from './modules/feedback/index.js'
 import geographyModule from './modules/geography/index.js'
+import googleMapsModule from './modules/googleMaps/index.js'
 import groundingModule from './modules/grounding/index.js'
 import ledgerModule from './modules/ledger/index.js'
 import notificationModule from './modules/notification/index.js'
@@ -66,8 +68,14 @@ export function buildApp(): FastifyInstance {
   app.register(creditScoreModule, { prefix: '/credit-score' })
   app.register(advisorSaathiModule, { prefix: '/advisor-saathi' })
   app.register(bankDossierModule, { prefix: '/bank-dossier' })
+  // The applicant → officer → Verified Approval flow: jurisdiction-routed
+  // review of a saved report, frozen dossier, public hash verification.
+  app.register(applicationsModule, { prefix: '/applications' })
   app.register(businessTypesModule, { prefix: '/business-types' })
   app.register(bankStatementModule, { prefix: '/bank-statement' })
+  // Live Google Maps enhancement layer — no database access at all, by
+  // construction (see modules/googleMaps/boundary.test.ts).
+  app.register(googleMapsModule, { prefix: '/google-maps' })
 
   return app
 }

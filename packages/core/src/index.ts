@@ -34,6 +34,13 @@ export {
 } from './feasibilityBaseline'
 
 export {
+  LIVE_COMPETITION_MAX_PENALTY,
+  competitionPenaltyForCount,
+  liveCompetitionAdjustment,
+  type LiveCompetitionAdjustment,
+} from './liveCompetition'
+
+export {
   getEligibleSchemes,
   type EligibilityInput,
   type EligibilityReason,

@@ -6,6 +6,7 @@
 import type { CpgramsAdapter } from './cpgramsAdapter.js'
 import { canApplicantEscalate, isSlaBreached, type EscalationReason } from './escalation.js'
 import type { AuditLogEntryInput } from '../../lib/auditLog.js'
+import { pickOfficerForBlock } from '../applications/assignment.js'
 import type { AppealRequestBody, AppealStatus, FlagRequestBody, UpdateAppealBody } from './types.js'
 
 export class ForbiddenError extends Error {
@@ -42,10 +43,14 @@ export function assertOfficer(role: string): void {
 export interface OfficerLoad {
   officerId: string
   openCount: number
+  // 'block' = covers the report's exact block; 'district' = whole district.
+  scope?: 'block' | 'district'
 }
 
-// Round-robin by current load, not just "the first officer" — an officer
-// with zero open appeals is always preferred over one with any.
+// Least-loaded pick — an officer with zero open appeals is always
+// preferred over one with any. (createAppeal now routes through
+// applications/assignment.ts's jurisdiction-aware pickOfficerForBlock;
+// this remains the plain load-only rule it builds on.)
 export function pickOfficerByLoad(loads: OfficerLoad[]): string | null {
   if (loads.length === 0) return null
   return loads.reduce((min, cur) => (cur.openCount < min.openCount ? cur : min)).officerId
@@ -66,7 +71,7 @@ export interface Appeal {
 }
 
 export interface QueueItem extends Appeal {
-  applicantPhone: string
+  applicantPhone: string | null
   report: {
     score: number
     verdictKey: string
@@ -88,7 +93,10 @@ export interface FeedbackDeps {
     emiSchedule: unknown
     dataVintage: Record<string, unknown>
   }) => Promise<{ id: string }>
-  getOfficerLoads: () => Promise<OfficerLoad[]>
+  // Officers whose jurisdiction covers this report's block, with their
+  // open-appeal counts. Empty → the appeal lands unassigned, for the admin
+  // to route (never to a random officer elsewhere).
+  getOfficerLoads: (inputs: Record<string, unknown>) => Promise<OfficerLoad[]>
   insertAppeal: (input: { applicantId: string; reportId: string; assignedOfficerId: string | null }) => Promise<Appeal>
   getOfficerQueue: (officerId: string) => Promise<QueueItem[]>
   getAppealById: (appealId: string) => Promise<Appeal | null>
@@ -101,6 +109,8 @@ export interface FeedbackDeps {
   getApplicantPhone: (applicantId: string) => Promise<string | null>
   cpgrams: CpgramsAdapter
   getReportById: (reportId: string) => Promise<StoredReport | null>
+  // Optional so existing test stubs stay short; absent = no officer access.
+  officerCanSeeReport?: (reportId: string, officerId: string) => Promise<boolean>
   insertAuditLogEntry: (input: AuditLogEntryInput) => Promise<void>
 }
 
@@ -148,8 +158,8 @@ export async function createAppeal(deps: FeedbackDeps, applicantId: string, body
     dataVintage: buildDataVintage(body, rule.version),
   })
 
-  const loads = await deps.getOfficerLoads()
-  const assignedOfficerId = pickOfficerByLoad(loads)
+  const loads = await deps.getOfficerLoads(body.inputs)
+  const assignedOfficerId = pickOfficerForBlock(loads.map((l) => ({ ...l, scope: l.scope ?? 'district' })))
 
   return deps.insertAppeal({ applicantId, reportId: report.id, assignedOfficerId })
 }
@@ -196,10 +206,10 @@ export async function getReportById(
 ): Promise<StoredReport> {
   const report = await deps.getReportById(reportId)
   if (!report) throw new NotFoundError('Report not found')
-  if (requesterRole !== 'officer' && report.applicantId !== requesterId) {
-    throw new ForbiddenError('Cannot view a report you do not own')
-  }
-  return report
+  if (requesterRole === 'admin' || report.applicantId === requesterId) return report
+  // An officer sees a report only if it's on a case assigned to them.
+  if (requesterRole === 'officer' && (await deps.officerCanSeeReport?.(reportId, requesterId))) return report
+  throw new ForbiddenError('Cannot view this report')
 }
 
 export async function getOfficerQueue(deps: FeedbackDeps, officerRole: string, officerId: string): Promise<QueueItem[]> {

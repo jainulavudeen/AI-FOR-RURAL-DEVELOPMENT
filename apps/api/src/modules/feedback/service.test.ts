@@ -375,21 +375,25 @@ describe('getReportById / reproducibility across a scheme_rules version bump', (
     await expect(getReportById(deps, 'applicant-1', 'applicant', 'report-1')).rejects.toThrow(ForbiddenError)
   })
 
-  it('lets any officer read any report regardless of ownership', async () => {
+  it('lets an officer read a report only when it is on a case assigned to them', async () => {
+    const stored = {
+      id: 'report-1',
+      applicantId: 'someone-else',
+      inputs: {},
+      score: 50,
+      verdictKey: 'verdict.marginal',
+      matchedSchemeId: 'micro_finance',
+      schemeRulesVersion: 'rule-v1',
+      emiSchedule: [],
+      dataVintage: {},
+      createdAt: new Date(),
+    }
     const deps = makeDeps({
-      getReportById: async () => ({
-        id: 'report-1',
-        applicantId: 'someone-else',
-        inputs: {},
-        score: 50,
-        verdictKey: 'verdict.marginal',
-        matchedSchemeId: 'micro_finance',
-        schemeRulesVersion: 'rule-v1',
-        emiSchedule: [],
-        dataVintage: {},
-        createdAt: new Date(),
-      }),
+      getReportById: async () => stored,
+      officerCanSeeReport: async (_reportId, officerId) => officerId === 'officer-1',
     })
     await expect(getReportById(deps, 'officer-1', 'officer', 'report-1')).resolves.toMatchObject({ id: 'report-1' })
+    await expect(getReportById(deps, 'officer-2', 'officer', 'report-1')).rejects.toThrow(ForbiddenError)
+    await expect(getReportById(deps, 'admin-1', 'admin', 'report-1')).resolves.toMatchObject({ id: 'report-1' })
   })
 })

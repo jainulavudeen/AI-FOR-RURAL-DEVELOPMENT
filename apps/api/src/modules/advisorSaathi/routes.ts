@@ -39,7 +39,7 @@ const advisorSaathiRoutes: FastifyPluginAsync = async (fastify) => {
   // timeout/rejected answer) and only the resulting, already-safe text is
   // revealed progressively — a genuine streaming UX with the safety
   // boundary fully intact, not raw model tokens.
-  fastify.post<{ Body: ChatRequestBody }>('/chat', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: ChatRequestBody }>('/chat', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const body = request.body ?? ({} as ChatRequestBody)
     if (!body.question?.trim()) {
       return reply.status(400).send({ error: { message: 'question is required', code: 'BAD_REQUEST' } })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseBankStatementText } from './pdfParser'
+import { parseBankStatementText } from './pdfParser.js'
 
 describe('parseBankStatementText', () => {
   it('extracts a debit line with a DR marker after the amount', () => {
@@ -53,6 +53,55 @@ describe('parseBankStatementText', () => {
     const { transactions, warnings } = parseBankStatementText(text)
     expect(transactions).toHaveLength(0)
     expect(warnings).toHaveLength(0)
+  })
+
+  it('classifies a separate Debit/Credit-column layout via the running balance, no marker needed', () => {
+    // Shaped like a real SBI statement export: Txn Date, Value Date,
+    // Description (which itself contains the literal text "UPI/DR/..."
+    // as part of the transaction reference — not a direction marker for
+    // the amount), then a lone Debit-or-Credit amount, then Balance.
+    // Opening balance implied by the first line's own trailing number.
+    const text = [
+      '28/11/2025 28/11/2025 UPI/DR/533276094192/Bakyalak/UTIB/gpay-12193/UPI 100.00 20350.75',
+      '28/11/2025 28/11/2025 UPI/DR/569862426805/Palladam/YESB/paytmqr6fq/UPI 1040.00 19310.75',
+      '28/11/2025 28/11/2025 PFM U300312113599 POSTMATRIC SCHOLARSH 00BPASX 37200.00 56510.75',
+    ].join('\n')
+    const { transactions, warnings } = parseBankStatementText(text)
+
+    // The very first line can never be classified this way — there is no
+    // prior balance to diff against — so it's an honest warning, not a
+    // guess or a silent drop.
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain('28/11/2025')
+
+    expect(transactions).toHaveLength(2)
+    expect(transactions[0]).toMatchObject({ amount: 1040, direction: 'debit' })
+    expect(transactions[1]).toMatchObject({ amount: 37200, direction: 'credit' })
+  })
+
+  it('does not misread the "DR"/"CR" inside a UPI reference code as a marker for an unrelated number', () => {
+    const text = [
+      '01/12/2025 01/12/2025 UPI/CR/566151084509/Karthike/SBIN/svkarthi39/UPI 1400.00 2131.85',
+      '01/12/2025 01/12/2025 UPI/DR/566199274722/GoogleI/UTIB/gpayrechar/UPI 19.00 2112.85',
+    ].join('\n')
+    const { transactions } = parseBankStatementText(text)
+    // First line unclassifiable (no prior balance); second's delta
+    // (2112.85 - 2131.85 = -19.00) matches its printed amount exactly,
+    // so it's confidently a debit — even though the description text
+    // contains "DR" nowhere near the amount, and "CR" belongs to the
+    // *previous* line's own reference code, not this one.
+    expect(transactions).toHaveLength(1)
+    expect(transactions[0]).toMatchObject({ amount: 19, direction: 'debit' })
+  })
+
+  it('does not guess when a mid-statement delta does not match the printed amount', () => {
+    const text = [
+      '01/12/2025 Opening row 100.00 1000.00',
+      '02/12/2025 Suspicious row 50.00 1200.00', // delta is +200, not 50 — inconsistent, must not guess
+    ].join('\n')
+    const { transactions, warnings } = parseBankStatementText(text)
+    expect(transactions).toHaveLength(0)
+    expect(warnings).toHaveLength(2)
   })
 
   it('handles a realistic multi-line statement end to end', () => {

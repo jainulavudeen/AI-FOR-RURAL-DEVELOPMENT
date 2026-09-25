@@ -36,7 +36,7 @@ const notificationRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }
 
-  fastify.post<{ Body: SendRequestBody }>('/send', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: SendRequestBody }>('/send', { preHandler: [fastify.requireRole('officer', 'admin')] }, async (request, reply) => {
     const { applicantId, channel, message } = request.body ?? {}
     if (!applicantId || !channel || !message) {
       return reply.status(400).send({ error: { message: 'applicantId, channel and message are required', code: 'BAD_REQUEST' } })
@@ -61,7 +61,7 @@ const notificationRoutes: FastifyPluginAsync = async (fastify) => {
   // trigger *point* that's missing, not the logic.
   fastify.post<{ Body: { oldRuleId?: string; newRuleId?: string; channel?: NotificationChannel } }>(
     '/scheme-change',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [fastify.requireRole('officer')] },
     async (request, reply) => {
       if (request.user.role !== 'officer') {
         return reply.status(403).send({ error: { message: 'Officer role required', code: 'FORBIDDEN' } })

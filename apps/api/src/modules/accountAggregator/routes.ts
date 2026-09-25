@@ -41,7 +41,7 @@ const accountAggregatorRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }
 
-  fastify.post<{ Body: RequestConsentBody }>('/consent', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: RequestConsentBody }>('/consent', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const { scope } = request.body ?? {}
     if (!scope || !Array.isArray(scope.fiTypes) || scope.fiTypes.length === 0) {
       return reply.status(400).send({ error: { message: 'scope.fiTypes is required', code: 'BAD_REQUEST' } })
@@ -50,14 +50,14 @@ const accountAggregatorRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(consent)
   })
 
-  fastify.get<{ Params: { id: string } }>('/consent/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>('/consent/:id', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const status = await getConsentStatus(deps, request.user.sub, request.params.id)
     return reply.status(200).send({ consentId: request.params.id, status })
   })
 
   fastify.post<{ Params: { id: string }; Body: FetchDataBody }>(
     '/consent/:id/fetch',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [fastify.requireRole('applicant')] },
     async (request, reply) => {
       const purpose = request.body?.purpose
       if (!purpose) {

@@ -8,8 +8,9 @@ import { useAppData } from '../context/AppDataContext'
 import { humanizeSlug } from '../lib/slug'
 import { BUSINESS_TYPES } from '../data/businesses'
 import { getEligibleSchemes, structureFinance, buildEmiSchedule } from '@setu/core'
-import { generateFeasibility, applyRealFactors, getBestAlternativeBusiness } from '../lib/feasibility'
-import { FALLBACK_INFORMAL_RATE, getInformalLendingRate, getFeasibilityScore } from '../lib/marketData'
+import { generateFeasibility, applyRealFactors, applyLiveCompetition, getBestAlternativeBusiness } from '../lib/feasibility'
+import { FALLBACK_INFORMAL_RATE, getInformalLendingRate, getFeasibilityScore, getCensusFacilities } from '../lib/marketData'
+import { getReportEnhancement } from '../lib/googleMaps'
 import { saveReport } from '../lib/feedback'
 import { formatINR, formatIndianNumber, formatPercent } from '../lib/format'
 import RadialGauge from '../components/RadialGauge'
@@ -21,12 +22,14 @@ import EmiScheduleTable from '../components/EmiScheduleTable'
 import ScoreBreakdown from '../components/ScoreBreakdown'
 import SchemeEligibilityTeaser from '../components/SchemeEligibilityTeaser'
 import AppealPanel from '../components/AppealPanel'
+import SaveAsApplication from '../components/SaveAsApplication'
 import CostOfInactionCard from '../components/CostOfInactionCard'
 import AccountAggregatorOptIn from '../components/AccountAggregatorOptIn'
 import MicroLesson from '../components/MicroLesson'
 import PeerBenchmarkCard from '../components/PeerBenchmarkCard'
 import AlternativeBusinessCard from '../components/AlternativeBusinessCard'
 import SiteCaptureCard from '../components/SiteCaptureCard'
+import SiteContextCard from '../components/SiteContextCard'
 import MarketplaceNudge from '../components/MarketplaceNudge'
 import ReportNarration from '../components/ReportNarration'
 import Icon from '../components/Icon'
@@ -131,6 +134,41 @@ export default function Results() {
 
   const feasibility = useMemo(() => applyRealFactors(baseFeasibility, realFactors), [baseFeasibility, realFactors])
 
+  // Live Google Maps enhancement + the Census 2011 figures it's compared
+  // against, both keyed on the Wizard's DIGIPIN pin. Fired in parallel,
+  // after first render, never awaited by anything: the report above is
+  // already complete from government data. lib/googleMaps.js skips the
+  // call entirely when offline.
+  const pinLat = selection.digipinLat
+  const pinLon = selection.digipinLon
+  const [censusFacilities, setCensusFacilities] = useState(null)
+  const [liveEnhancement, setLiveEnhancement] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    setCensusFacilities(null)
+    setLiveEnhancement(null)
+    if (pinLat == null || pinLon == null) return undefined
+    getCensusFacilities(pinLat, pinLon).then((result) => {
+      if (!cancelled) setCensusFacilities(result)
+    })
+    getReportEnhancement(pinLat, pinLon, selection.businessId).then((result) => {
+      if (!cancelled) setLiveEnhancement(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [pinLat, pinLon, selection.businessId])
+
+  // Display-only: the low-weight live competition factor. Everything that
+  // is saved or appealed (saveReport, AppealPanel below) uses the
+  // government-data `feasibility`, never this — a stored report must
+  // trace to auditable sources. See @setu/core's liveCompetitionAdjustment
+  // for why this can never change the verdict.
+  const displayFeasibility = useMemo(
+    () => applyLiveCompetition(feasibility, liveEnhancement?.competition ?? null),
+    [feasibility, liveEnhancement]
+  )
+
   // Best-effort, silent persistence of every completed report a logged-in
   // applicant views — not just the ones they appeal. Feeds the peer
   // benchmark's cohort (PeerBenchmarkCard below) and gives SiteCaptureCard
@@ -193,7 +231,7 @@ export default function Results() {
         <div className="flex flex-wrap gap-3">
           <ReportNarration
             business={business}
-            feasibility={feasibility}
+            feasibility={displayFeasibility}
             finance={finance}
             schedule={schedule}
             stateName={stateName}
@@ -229,6 +267,13 @@ export default function Results() {
         </div>
       </div>
 
+      {/* The step from "a report" to "an application an officer reviews":
+          save it as a draft (or attach it to one that needs changes), then
+          submit it from My Dashboard. */}
+      <div className="mb-8">
+        <SaveAsApplication reportId={savedReportId} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* MODULE 1 */}
         <motion.section
@@ -256,10 +301,10 @@ export default function Results() {
             </p>
           )}
 
-          <RadialGauge score={feasibility.score} verdict={t(feasibility.verdictKey)} />
+          <RadialGauge score={displayFeasibility.score} verdict={t(displayFeasibility.verdictKey)} />
 
           <div className="mt-8">
-            <ScoreBreakdown factors={feasibility.factors} excludedFactors={feasibility.excludedFactors} />
+            <ScoreBreakdown factors={displayFeasibility.factors} excludedFactors={displayFeasibility.excludedFactors} />
           </div>
 
           {alternative && (
@@ -297,6 +342,8 @@ export default function Results() {
             districtId={selection.districtId}
             verdictKey={feasibility.verdictKey}
           />
+
+          <SiteContextCard census={censusFacilities} live={liveEnhancement} />
 
           <SiteCaptureCard reportId={savedReportId} />
 

@@ -4,113 +4,133 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { I18nProvider } from '../i18n/I18nContext'
 import { AuthProvider, useAuth } from '../context/AuthContext'
 import AuthControl from './AuthControl'
-import AuthModal from './AuthModal'
+import RequireRole from './RequireRole'
+import SignIn from '../pages/SignIn'
 import * as authLib from '../lib/auth'
+import { safeNextPath } from '../lib/routeAccess'
 
-// Regression coverage for: "sign-in only works from the nav bar" — every
-// other gated entry point (Dashboard, CreditScore, AdvisorSaathi,
-// BankDossier, BahiKhata, AppealPanel, ...) calls the exact same
-// useAuth().requestLogin() that PageGateButton simulates here. The bug was
-// never in that wiring — it was that the popover they woke up lived inside
-// a CSS-hidden Navbar breakpoint. This test proves the property that fix
-// actually guarantees: ANY caller of requestLogin() reaches the SAME,
-// always-mounted AuthModal, and login lands the user back where they were.
+// Every sign-in entry point (navbar, a page's own gate, a guarded route)
+// goes to the ONE /signin page, and after sign-in the role returned by the
+// server decides where the user lands: back where they were if their role
+// may open it, otherwise their role's home.
 
-function PageGateButton({ label = 'gated-action' }) {
+function PageGateButton() {
   const { requestLogin } = useAuth()
   return (
     <button type="button" onClick={requestLogin}>
-      {label}
+      gated-action
     </button>
   )
 }
 
 function LocationProbe() {
   const location = useLocation()
-  return <div data-testid="location">{location.pathname}</div>
+  return <div data-testid="location">{location.pathname + location.search}</div>
 }
 
-function renderApp(initialPath, gateLabel) {
+function renderApp(initialPath) {
   return render(
     <I18nProvider>
-      <AuthProvider>
-        <MemoryRouter initialEntries={[initialPath]}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <AuthProvider>
           <LocationProbe />
-          {/* AuthControl mimics the Navbar's own sign-in button; it is
-              deliberately mounted alongside a page-level gate button (both
-              call requestLogin) to prove they drive one shared modal. */}
           <AuthControl />
           <Routes>
-            <Route path={initialPath} element={<PageGateButton label={gateLabel} />} />
+            <Route path="/" element={<PageGateButton />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/credit-score" element={<RequireRole roles={['applicant']}>credit-score-page</RequireRole>} />
+            <Route path="/dashboard" element={<RequireRole roles={['applicant']}>applicant-home</RequireRole>} />
+            <Route path="/review" element={<RequireRole roles={['officer']}>officer-home</RequireRole>} />
+            <Route path="/admin" element={<RequireRole roles={['admin']}>admin-home</RequireRole>} />
           </Routes>
-          <AuthModal />
-        </MemoryRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </MemoryRouter>
     </I18nProvider>
   )
 }
 
-async function completeLogin({ triggerLabel }) {
-  fireEvent.click(screen.getByText(triggerLabel))
+function mockSignIn(role) {
+  vi.spyOn(authLib, 'verifyOtp').mockResolvedValue({
+    ok: true,
+    status: 200,
+    session: { accessToken: 'tok', refreshToken: 'ref', phone: '+919876543210', role },
+  })
+}
 
+async function completePhoneLogin() {
   const phoneInput = await screen.findByPlaceholderText(/10-digit mobile number/i)
   fireEvent.change(phoneInput, { target: { value: '9876543210' } })
   fireEvent.click(screen.getByRole('button', { name: /send code/i }))
-
   await waitFor(() => expect(authLib.requestOtp).toHaveBeenCalledWith('+919876543210'))
-
   const codeInput = await screen.findByPlaceholderText(/6-digit code/i)
   fireEvent.change(codeInput, { target: { value: '123456' } })
   fireEvent.click(screen.getByRole('button', { name: /^verify$/i }))
-
   await waitFor(() => expect(authLib.verifyOtp).toHaveBeenCalledWith('+919876543210', '123456'))
 }
 
-describe('sign-in entry points share one modal and one auth state', () => {
+const location = () => screen.getByTestId('location').textContent
+
+describe('one sign-in page, role-based landing', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
     vi.spyOn(authLib, 'requestOtp').mockResolvedValue({ ok: true, status: 200, data: { deliveryMode: 'sms' } })
-    vi.spyOn(authLib, 'verifyOtp').mockResolvedValue({
-      ok: true,
-      status: 200,
-      session: { accessToken: 'tok', refreshToken: 'ref', phone: '+919876543210', role: 'applicant' },
-    })
+    vi.spyOn(authLib, 'getAuthConfig').mockResolvedValue({ googleClientId: null })
+    vi.spyOn(authLib, 'fetchMe').mockResolvedValue(undefined)
   })
 
-  it('opens the modal from a page-level gate button (not just the navbar)', async () => {
-    renderApp('/credit-score', 'open-from-page')
-
-    // Before clicking, no login form should be present anywhere — proves
-    // there's no second, hidden instance already rendered open.
-    expect(screen.queryByPlaceholderText(/10-digit mobile number/i)).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByText('open-from-page'))
-
-    // The SAME AuthModal (mounted once, outside Navbar/AuthControl) must
-    // become visible in response — this is the exact thing that silently
-    // failed before, when the only mounted popover sat under display:none.
-    // (waitFor, not a bare assertion: framer-motion's opacity fade-in is a
-    // real requestAnimationFrame-driven transition even in jsdom, so
-    // toBeVisible() can observe it mid-fade — that's animation timing, not
-    // the display:none regression this test targets.)
-    const phoneInput = await screen.findByPlaceholderText(/10-digit mobile number/i)
-    await waitFor(() => expect(phoneInput).toBeVisible())
+  it('a guarded page sends a signed-out visitor to /signin, remembering where they were going', async () => {
+    renderApp('/credit-score')
+    await waitFor(() => expect(location()).toBe('/signin?next=%2Fcredit-score'))
+    expect(screen.queryByText('credit-score-page')).not.toBeInTheDocument()
   })
 
-  it('opens the modal from the navbar control too, proving both share state', async () => {
-    renderApp('/dashboard', 'open-from-page')
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
-    const phoneInput = await screen.findByPlaceholderText(/10-digit mobile number/i)
-    await waitFor(() => expect(phoneInput).toBeVisible())
+  it('a page-level gate and the navbar button both go to the same sign-in page', async () => {
+    renderApp('/')
+    fireEvent.click(screen.getByText('gated-action'))
+    await waitFor(() => expect(location()).toBe('/signin?next=%2F'))
+    expect(await screen.findByPlaceholderText(/10-digit mobile number/i)).toBeInTheDocument()
   })
 
-  it('returns the user to the page that requested login, not the home page', async () => {
-    renderApp('/credit-score', 'open-from-page')
-    await completeLogin({ triggerLabel: 'open-from-page' })
+  it('returns an applicant to the page they were opening', async () => {
+    mockSignIn('applicant')
+    renderApp('/credit-score')
+    await completePhoneLogin()
+    await waitFor(() => expect(location()).toBe('/credit-score'))
+    expect(screen.getByText('credit-score-page')).toBeInTheDocument()
+  })
 
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/credit-score'))
-    // Modal must also actually close once login completes.
-    expect(screen.queryByPlaceholderText(/10-digit mobile number/i)).not.toBeInTheDocument()
+  it('an officer who was sent from an applicant page lands on the Review Queue instead', async () => {
+    mockSignIn('officer')
+    renderApp('/credit-score')
+    await completePhoneLogin()
+    await waitFor(() => expect(location()).toBe('/review'))
+  })
+
+  it('an admin signing in with no destination lands on the Admin Portal', async () => {
+    mockSignIn('admin')
+    renderApp('/signin')
+    await completePhoneLogin()
+    await waitFor(() => expect(location()).toBe('/admin'))
+  })
+
+  it('a signed-in applicant opening an admin page is sent to their own dashboard', async () => {
+    localStorage.setItem('setu.auth', JSON.stringify({ accessToken: 'tok', refreshToken: 'ref', role: 'applicant' }))
+    renderApp('/admin')
+    await waitFor(() => expect(location()).toBe('/dashboard'))
+    expect(screen.queryByText('admin-home')).not.toBeInTheDocument()
+  })
+})
+
+describe('safeNextPath', () => {
+  it('never honours an off-site or protocol-relative redirect', () => {
+    expect(safeNextPath('//evil.example/x', 'applicant')).toBeNull()
+    expect(safeNextPath('https://evil.example', 'applicant')).toBeNull()
+  })
+
+  it('honours an in-app path only when the role may open it', () => {
+    expect(safeNextPath('/credit-score?x=1', 'applicant')).toBe('/credit-score?x=1')
+    expect(safeNextPath('/admin', 'applicant')).toBeNull()
+    expect(safeNextPath('/bank-dossier/abc', 'officer')).toBe('/bank-dossier/abc')
   })
 })

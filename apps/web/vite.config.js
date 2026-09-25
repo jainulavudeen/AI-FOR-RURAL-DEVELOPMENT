@@ -56,6 +56,27 @@ export default defineConfig({
             },
           },
           {
+            // Census 2011 facility figures near the report's pin — our own
+            // government data, so a report viewed once keeps its Census
+            // column offline. Separate cache from the signals above: one
+            // entry per pin, and a longer life (the data is from 2011).
+            urlPattern: ({ url }) => url.pathname === '/feasibility/census-facilities',
+            method: 'GET',
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'setu-census-facilities',
+              expiration: { maxEntries: 30, maxAgeSeconds: 7 * 24 * 60 * 60 },
+            },
+          },
+          {
+            // Google Maps enhancement: explicitly NEVER cached. Google's
+            // terms don't allow keeping its content, and the server also
+            // sends Cache-Control: no-store. Stated as its own rule so a
+            // future broad pattern can't sweep these paths into a cache.
+            urlPattern: ({ url }) => url.pathname.startsWith('/google-maps/'),
+            handler: 'NetworkOnly',
+          },
+          {
             // "Flag this data" / "Request Human Review" while offline: the
             // service worker queues the failed POST and replays it once
             // connectivity returns, instead of the user seeing an error or

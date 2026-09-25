@@ -25,5 +25,15 @@ export const siteCaptures = pgTable('site_captures', {
   longitude: doublePrecision('longitude').notNull(),
   photoDataUrl: text('photo_data_url').notNull(),
   consentAt: timestamp('consent_at', { withTimezone: true }).notNull(),
+  // The site's address AS THE USER CONFIRMED OR TYPED IT — user-provided
+  // data, which is the permitted way to keep an address under Google's
+  // terms. A Google reverse-geocode suggestion is only ever shown to the
+  // user; the raw suggestion is never stored. `addressSource` records
+  // which path produced it: 'user_confirmed' (accepted a suggestion
+  // unchanged), 'user_corrected' (edited a suggestion), 'user_entered'
+  // (typed with no suggestion, e.g. offline). The DIGIPIN above remains
+  // the permanent machine-readable location record.
+  confirmedAddress: text('confirmed_address'),
+  addressSource: text('address_source'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })

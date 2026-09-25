@@ -2,10 +2,14 @@ import { env } from '../config/env.js'
 import { sha256Hex } from './hash.js'
 
 // "Verified Approval", not a digital signature — this repo has no
-// government DSC (Digital Signature Certificate) integration, and
-// CLAUDE.md item 7 is explicit: never claim one. This is a tamper-evident
-// hash a bank can re-derive and check against our records (see
-// GET /bank-dossier/verify/:hash), not a legally-recognized e-signature.
-export function computeApprovalSignatureHash(dossierId: string, officerId: string, approvedAt: Date): string {
-  return sha256Hex(`${dossierId}:${officerId}:${approvedAt.toISOString()}:${env.APPROVAL_SIGNING_SECRET}`)
+// government DSC (Digital Signature Certificate) integration, and the UI
+// and printed document must never claim one. This is a tamper-evident
+// hash of (subject id + officer id + approval timestamp + server secret):
+// it can't be forged without APPROVAL_SIGNING_SECRET, and a bank checks
+// it against our records at the public GET /applications/verify/:hash
+// (the dossier's QR code links there). `subjectId` is the application id
+// for approvals recorded through modules/applications; hashes issued by
+// the retired standalone dossier approval used the dossier id.
+export function computeApprovalSignatureHash(subjectId: string, officerId: string, approvedAt: Date): string {
+  return sha256Hex(`${subjectId}:${officerId}:${approvedAt.toISOString()}:${env.APPROVAL_SIGNING_SECRET}`)
 }

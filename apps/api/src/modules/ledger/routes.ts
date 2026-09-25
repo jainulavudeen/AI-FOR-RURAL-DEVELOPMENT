@@ -48,17 +48,17 @@ const ledgerRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }
 
-  fastify.post<{ Body: CreateTransactionBody }>('/transactions', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post<{ Body: CreateTransactionBody }>('/transactions', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const txn = await recordTransaction(deps, request.user.sub, request.body ?? ({} as CreateTransactionBody))
     return reply.status(201).send(txn)
   })
 
-  fastify.get('/transactions', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/transactions', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const txns = await listTransactions(deps, request.user.sub)
     return reply.status(200).send(txns)
   })
 
-  fastify.get('/summary', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/summary', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const summary = await getLedgerSummary(deps, request.user.sub)
     return reply.status(200).send(summary)
   })

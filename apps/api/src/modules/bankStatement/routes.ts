@@ -66,7 +66,7 @@ const bankStatementRoutes: FastifyPluginAsync = async (fastify) => {
     },
   }
 
-  fastify.post('/upload', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/upload', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const file = await request.file()
     if (!file) {
       return reply.status(400).send({ error: { message: 'file is required', code: 'BAD_REQUEST' } })
@@ -76,7 +76,7 @@ const bankStatementRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(200).send(result)
   })
 
-  fastify.get('/uploads', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/uploads', { preHandler: [fastify.requireRole('applicant')] }, async (request, reply) => {
     const rows = await fastify.db
       .select()
       .from(bankStatementUploads)

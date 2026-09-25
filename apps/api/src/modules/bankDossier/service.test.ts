@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { LedgerTransaction } from '@setu/core'
-import { approveDossier, generateDossier, getDossier, verifyApprovalHash, ForbiddenError, NotFoundError, ValidationError } from './service.js'
+import { generateDossier, getDossier, getDossierApproval, verifyApprovalHash, ForbiddenError, NotFoundError } from './service.js'
 import type { BankDossierDeps } from './service.js'
 import type { BankDossierRecord, DossierApproval, DossierSnapshot } from './types.js'
 
@@ -23,18 +23,8 @@ function makeDeps(overrides: Partial<BankDossierDeps> = {}): BankDossierDeps {
         }) as BankDossierRecord
     ),
     getDossierById: vi.fn(async () => null),
-    insertApproval: vi.fn(
-      async (input) =>
-        ({
-          id: 'approval-1',
-          dossierId: input.dossierId,
-          officerId: input.officerId,
-          officerName: input.officerName,
-          officerDesignation: input.officerDesignation,
-          signatureHash: input.signatureHash,
-          approvedAt: input.approvedAt.toISOString(),
-        }) as DossierApproval
-    ),
+    officerCanSeeDossier: vi.fn(async () => false),
+    getApplicationApproval: vi.fn(async () => null),
     getApprovalsByDossierId: vi.fn(async () => []),
     getApprovalByHash: vi.fn(async () => null),
     insertAuditLogEntry: vi.fn(async () => {}),
@@ -90,67 +80,35 @@ describe('getDossier', () => {
     )
   })
 
-  it('lets an officer view a dossier they do not own, to review it for approval', async () => {
+  it('lets an officer view a dossier whose application is assigned to them', async () => {
     const deps = makeDeps({
       getDossierById: vi.fn(async () => ({ id: 'd1', applicantId: 'applicant-1', schemeId: null, snapshot: {} as DossierSnapshot, createdAt: '' })),
+      officerCanSeeDossier: vi.fn(async (_dossierId: string, officerId: string) => officerId === 'officer-1'),
     })
-    await expect(getDossier(deps, 'officer-1', 'officer', 'd1')).resolves.toEqual(
-      expect.objectContaining({ id: 'd1' })
-    )
+    await expect(getDossier(deps, 'officer-1', 'officer', 'd1')).resolves.toEqual(expect.objectContaining({ id: 'd1' }))
+  })
+
+  it('refuses an officer who has no assigned application for that dossier', async () => {
+    const deps = makeDeps({
+      getDossierById: vi.fn(async () => ({ id: 'd1', applicantId: 'applicant-1', schemeId: null, snapshot: {} as DossierSnapshot, createdAt: '' })),
+      officerCanSeeDossier: vi.fn(async () => false),
+    })
+    await expect(getDossier(deps, 'officer-2', 'officer', 'd1')).rejects.toThrow(ForbiddenError)
   })
 })
 
-describe('approveDossier', () => {
-  const existingDossier = { id: 'd1', applicantId: 'applicant-1', schemeId: null, snapshot: {} as DossierSnapshot, createdAt: '' }
+describe('getDossierApproval', () => {
+  const dossier = { id: 'd1', applicantId: 'applicant-1', schemeId: null, snapshot: {} as DossierSnapshot, createdAt: '' }
 
-  it('refuses a non-officer, even a valid applicant', async () => {
-    const deps = makeDeps({ getDossierById: vi.fn(async () => existingDossier) })
-    await expect(
-      approveDossier(deps, 'applicant-1', 'applicant', 'd1', { officerName: 'A', officerDesignation: 'B' })
-    ).rejects.toThrow(ForbiddenError)
+  it('returns null (→ "Pending review") when nothing approved it', async () => {
+    const deps = makeDeps({ getDossierById: vi.fn(async () => dossier) })
+    await expect(getDossierApproval(deps, 'applicant-1', 'applicant', 'd1')).resolves.toBeNull()
   })
 
-  it('refuses an admin token — oversight only, admins never approve dossiers themselves (CLAUDE.md item 6)', async () => {
-    const deps = makeDeps({ getDossierById: vi.fn(async () => existingDossier) })
-    await expect(
-      approveDossier(deps, 'admin-1', 'admin', 'd1', { officerName: 'A', officerDesignation: 'B' })
-    ).rejects.toThrow(ForbiddenError)
-  })
-
-  it('requires officerName and officerDesignation', async () => {
-    const deps = makeDeps({ getDossierById: vi.fn(async () => existingDossier) })
-    await expect(approveDossier(deps, 'officer-1', 'officer', 'd1', { officerName: '', officerDesignation: '' })).rejects.toThrow(
-      ValidationError
-    )
-  })
-
-  it('404s when the dossier does not exist', async () => {
-    const deps = makeDeps({ getDossierById: vi.fn(async () => null) })
-    await expect(
-      approveDossier(deps, 'officer-1', 'officer', 'missing', { officerName: 'A', officerDesignation: 'B' })
-    ).rejects.toThrow(NotFoundError)
-  })
-
-  it('inserts a new approval with a real signature hash, trimmed fields', async () => {
-    const deps = makeDeps({ getDossierById: vi.fn(async () => existingDossier) })
-    const approval = await approveDossier(deps, 'officer-1', 'officer', 'd1', {
-      officerName: '  Priya Sharma  ',
-      officerDesignation: ' District Industries Officer ',
-    })
-
-    expect(approval.officerName).toBe('Priya Sharma')
-    expect(approval.officerDesignation).toBe('District Industries Officer')
-    expect(approval.signatureHash).toMatch(/^[0-9a-f]{64}$/)
-    expect(deps.insertApproval).toHaveBeenCalledTimes(1)
-  })
-
-  it('re-approving inserts a second row rather than editing the first (tamper-evident by construction)', async () => {
-    const deps = makeDeps({ getDossierById: vi.fn(async () => existingDossier) })
-    await approveDossier(deps, 'officer-1', 'officer', 'd1', { officerName: 'A', officerDesignation: 'B' })
-    await approveDossier(deps, 'officer-1', 'officer', 'd1', { officerName: 'A', officerDesignation: 'B' })
-    // insertApproval only ever inserts — never called with an id/update
-    // semantics — so two approvals means two independent insert calls.
-    expect(deps.insertApproval).toHaveBeenCalledTimes(2)
+  it('prefers the applications-flow Verified Approval', async () => {
+    const view = { officerName: 'K. Meena', officerDesignation: 'DIC', approvedAt: '2026-09-25T00:00:00.000Z', signatureHash: 'a'.repeat(64), current: true }
+    const deps = makeDeps({ getDossierById: vi.fn(async () => dossier), getApplicationApproval: vi.fn(async () => view) })
+    await expect(getDossierApproval(deps, 'applicant-1', 'applicant', 'd1')).resolves.toEqual(view)
   })
 })
 

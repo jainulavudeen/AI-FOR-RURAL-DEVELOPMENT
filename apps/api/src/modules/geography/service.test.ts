@@ -5,7 +5,7 @@ function makeDeps(overrides: Partial<GeographyDeps> = {}): GeographyDeps {
   return {
     listStates: vi.fn(async () => [{ id: 'tamil_nadu', name: 'Tamil Nadu' }]),
     listDistricts: vi.fn(async () => [{ id: 'madurai', uuid: 'district-uuid-1', name: 'Madurai' }]),
-    listBlocks: vi.fn(async () => [{ id: 'melur', name: 'Melur' }]),
+    listBlocks: vi.fn(async () => [{ id: 'melur', uuid: 'block-uuid-1', name: 'Melur' }]),
     ...overrides,
   }
 }
